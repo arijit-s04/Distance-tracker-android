@@ -9,7 +9,9 @@ import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationManager;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.Looper;
+import android.os.Parcelable;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -20,6 +22,8 @@ import android.view.animation.AnimationUtils;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.cardview.widget.CardView;
 import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.Fragment;
 
@@ -89,17 +93,19 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
     private MapView mapView;
     private GoogleMap mMap;
     private Animation disReveal, disHide;
-    private FloatingActionButton fabAction;
+    private FloatingActionButton fabAction, fabCurLocation;
     private TextView tvDistance;
+    private CardView tvContainer;
     private FusedLocationProviderClient providerClient;
     private String[] wantedPerm = {Manifest.permission.ACCESS_FINE_LOCATION};
     private CameraPosition.Builder cameraBuilder;
     private Marker curMarker;
-    private Polyline polyline;
     private PolylineOptions polylineOptions;
     private boolean trackState = false;
     private ArrayList<LatLng> travelCoordinates = new ArrayList<>();
     private float totDistTravelled = 0f;
+    private LatLng initLatLng;
+    private String TRACK_STATE = "trackState";
 
     /**
      *
@@ -112,8 +118,9 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        // Inflate the layout for this fragment
+        Log.i(TAG, "onCreateView: ");
         View root = inflater.inflate(R.layout.fragment_home, container, false);
+        getActivity().setTitle(R.string.title_home);
         mapView = root.findViewById(R.id.mapView);
         /**
          * check location enabled
@@ -123,33 +130,51 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
         disReveal = AnimationUtils.loadAnimation(getContext(), R.anim.distance_reveal);
         disHide = AnimationUtils.loadAnimation(getContext(), R.anim.distance_hide);
         fabAction = root.findViewById(R.id.fab_action);
+        fabCurLocation = root.findViewById(R.id.fab_cur_location);
         tvDistance = root.findViewById(R.id.tv_distance);
-        tvDistance.setVisibility(View.INVISIBLE);
+        tvContainer = root.findViewById(R.id.tv_container);
+        tvContainer.setVisibility(View.INVISIBLE);
+
+        /**
+         * init map
+         */
+        mapView.onCreate(savedInstanceState);
+        mapView.getMapAsync(this);
+
+        /**
+         * listener
+         */
 
         fabAction.setOnClickListener(v -> {
             if(!trackState) {
                 totDistTravelled = 0.00f;
                 trackState = true;
-                tvDistance.startAnimation(disReveal);
-                disReveal.setAnimationListener(new Animation.AnimationListener() {
+                new Handler().post(new Runnable() {
                     @Override
-                    public void onAnimationStart(Animation animation) {
-                        tvDistance.setVisibility(View.VISIBLE);
+                    public void run() {
+                        tvContainer.startAnimation(disReveal);
+                        disReveal.setAnimationListener(new Animation.AnimationListener() {
+                            @Override
+                            public void onAnimationStart(Animation animation) {
+                                tvContainer.setVisibility(View.VISIBLE);
+                            }
+                            @Override
+                            public void onAnimationEnd(Animation animation) {}
+                            @Override
+                            public void onAnimationRepeat(Animation animation) {}
+                        });
                     }
-                    @Override
-                    public void onAnimationEnd(Animation animation) {}
-                    @Override
-                    public void onAnimationRepeat(Animation animation) {}
                 });
+
                 startTrack();
             }
             else{
                 trackState = false;
-                tvDistance.startAnimation(disHide);
+                tvContainer.startAnimation(disHide);
                 disHide.setAnimationListener(new Animation.AnimationListener() {
                     @Override
                     public void onAnimationStart(Animation animation) {
-                        tvDistance.setVisibility(View.INVISIBLE);
+                        tvContainer.setVisibility(View.INVISIBLE);
                     }
                     @Override
                     public void onAnimationEnd(Animation animation) {}
@@ -160,53 +185,40 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
             }
         });
 
-        mapView.onCreate(savedInstanceState);
-        mapView.getMapAsync(this);
+        fabCurLocation.setOnClickListener(v ->{
+            setCurrentLocation();
+        });
 
         return root;
     }
+
+    /**
+     * map Ready
+     * @param googleMap
+     */
     @Override
     public void onMapReady(@NonNull GoogleMap googleMap) {
+        Log.i(TAG, "onMapReady: ");
+
         mMap = googleMap;
         mMap.getUiSettings().setMapToolbarEnabled(false);
-
         cameraBuilder = new CameraPosition.Builder().tilt(30).zoom(18);
         polylineOptions = new PolylineOptions();
-
         providerClient = LocationServices.getFusedLocationProviderClient(getContext());
-        if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
-            && ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(getActivity(), wantedPerm, 101);
-        }
-        providerClient.getCurrentLocation(LocationRequest.PRIORITY_HIGH_ACCURACY, new CancellationToken() {
-            @Override
-            public boolean isCancellationRequested() {
-                return false;
-            }
 
-            @NonNull
-            @Override
-            public CancellationToken onCanceledRequested(@NonNull OnTokenCanceledListener onTokenCanceledListener) {
-                return null;
-            }
-        })
-        .addOnSuccessListener(new OnSuccessListener<Location>() {
-            @Override
-            public void onSuccess(Location location) {
-                if(location == null)
-                    return;
-                curMarker = mMap.addMarker(new MarkerOptions()
-                        .position(new LatLng(location.getLatitude(), location.getLongitude())));
-                cameraBuilder.target(new LatLng(location.getLatitude(), location.getLongitude()));
-                mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraBuilder.build()));
-            }
-        })
-        .addOnFailureListener(new OnFailureListener() {
-            @Override
-            public void onFailure(@NonNull Exception e) {
-                Snackbar.make(getView(), e.getMessage(), Snackbar.LENGTH_LONG).show();
-            }
-        });
+        if(!trackState && initLatLng != null){
+            cameraBuilder.target(initLatLng);
+            Log.i(TAG, "onMapReady: state false "+initLatLng.latitude);
+            mMap.moveCamera(CameraUpdateFactory.newCameraPosition(cameraBuilder.build()));
+            curMarker = mMap.addMarker(new MarkerOptions()
+                    .position(initLatLng));
+            return;
+        }
+        else if(trackState){
+            return;
+        }
+
+        setCurrentLocation();
 
     }
 
@@ -230,7 +242,6 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
 
 
     //=============
-    private boolean firstCameraCheck = true;
     LocationCallback locationCallback = new LocationCallback() {
         @Override
         public void onLocationResult(@NonNull LocationResult locationResult) {
@@ -263,22 +274,70 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
                 if(curMarker == null)
                     curMarker = mMap.addMarker(new MarkerOptions().position(pos));
                 else{
-                    curMarker.setPosition(pos);
+                    MarkerAnimation.animateMarkerToGB(mMap, curMarker, pos, new LatLngInterpolator.Spherical());
                 }
+
                 /**
                  * keeping current camera features
                  */
+
                 cameraBuilder.target(pos);
                 cameraBuilder.zoom(mMap.getCameraPosition().zoom);
                 cameraBuilder.tilt(mMap.getCameraPosition().tilt);
                 cameraBuilder.bearing(mMap.getCameraPosition().bearing);
 
                 mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraBuilder.build()));
-                polylineOptions.add(pos);
-                mMap.addPolyline(polylineOptions);
+
             }
         }
     };
+
+    private void setCurrentLocation(){
+        if(!trackState) {
+            if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                    && ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(getActivity(), wantedPerm, 101);
+            }
+            providerClient.getCurrentLocation(LocationRequest.PRIORITY_HIGH_ACCURACY, new CancellationToken() {
+                @Override
+                public boolean isCancellationRequested() {
+                    return false;
+                }
+
+                @NonNull
+                @Override
+                public CancellationToken onCanceledRequested(@NonNull OnTokenCanceledListener onTokenCanceledListener) {
+                    return null;
+                }
+            })
+                    .addOnSuccessListener(new OnSuccessListener<Location>() {
+                        @Override
+                        public void onSuccess(Location location) {
+                            if (location == null)
+                                return;
+                            initLatLng = new LatLng(location.getLatitude(), location.getLongitude());
+                            if (curMarker == null) {
+                                curMarker = mMap.addMarker(new MarkerOptions()
+                                        .position(initLatLng));
+                            } else {
+                                curMarker.setPosition(initLatLng);
+                            }
+                            cameraBuilder.target(initLatLng);
+                            mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraBuilder.build()));
+                        }
+                    })
+                    .addOnFailureListener(new OnFailureListener() {
+                        @Override
+                        public void onFailure(@NonNull Exception e) {
+                            Snackbar.make(getView(), e.getMessage(), Snackbar.LENGTH_LONG).show();
+                        }
+                    });
+        }
+        else if(travelCoordinates!=null && travelCoordinates.size()>0){
+            cameraBuilder.target(travelCoordinates.get(travelCoordinates.size()-1));
+            mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraBuilder.build()));
+        }
+    }
 
     private String distanceFormat(float d){
         if(d>1000f){
@@ -297,12 +356,14 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
     }
     @Override
     public void onResume() {
+        Log.i(TAG, "onResume: ");
         super.onResume();
         mapView.onResume();
     }
 
     @Override
     public void onPause() {
+        Log.i(TAG, "onPause: ");
         super.onPause();
         mapView.onPause();
     }
@@ -318,6 +379,26 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
         super.onDestroy();
         mapView.onDestroy();
     }
+
+    @Override
+    public void onSaveInstanceState(Bundle outstate){
+        super.onSaveInstanceState(outstate);
+        Log.i(TAG, "onSaveInstanceState: ");
+        outstate.putBoolean(TRACK_STATE, trackState);
+        if(!trackState){
+            outstate.putParcelable("initLatLng" , initLatLng);
+        }
+    }
+
+    @Override
+    public void onViewStateRestored(@Nullable Bundle savedInstanceState) {
+        Log.i(TAG, "onViewStateRestored: ");
+        super.onViewStateRestored(savedInstanceState);
+        if(savedInstanceState!=null) {
+            initLatLng = (LatLng) savedInstanceState.getParcelable("initLatLng");
+        }
+    }
+
 
     private void isLocationEnabled(){
         LocationManager lm = (LocationManager) getContext().getSystemService(Context.LOCATION_SERVICE);
@@ -340,7 +421,6 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
                     .setNegativeButton(R.string.cancel, null)
                     .show();
         }
-
     }
 
 }

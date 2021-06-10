@@ -58,13 +58,7 @@ public class HistoryFragment extends Fragment {
             mParam1 = getArguments().getString(ARG_PARAM1);
             mParam2 = getArguments().getString(ARG_PARAM2);
         }
-        runCounter();
     }
-
-    private int counter = 0;
-    private boolean running = false;
-    private TextView textHome;
-    private Button btnStart, btnStop;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -76,40 +70,9 @@ public class HistoryFragment extends Fragment {
          */
         getActivity().setTitle(R.string.title_history);
 
-        textHome = root.findViewById(R.id.text_home);
-        btnStart = root.findViewById(R.id.btn_start);
-        btnStop = root.findViewById(R.id.btn_stop);
-        /**
-         * init end
-         */
-
-        btnStart.setOnClickListener(v -> {
-            running = true;
-            btnStart.setEnabled(false);
-            startService();
-        });
-        btnStop.setOnClickListener(v -> {
-            counter = 0;
-            running = false;
-            btnStart.setEnabled(true);
-            stopService();
-        });
-
         return root;
     }
-    private void runCounter(){
-        final Handler handler = new Handler();
-        handler.post(new Runnable() {
-            @Override
-            public void run() {
-                final TextView tvHandler = textHome;
-                tvHandler.setText(String.valueOf(counter));
-                if(running)
-                    counter++;
-                handler.postDelayed(this, 1000);
-            }
-        });
-    }
+/*
     public void startService(){
         Intent serviceIntent = new Intent(getContext(), ForegroundService.class);
         serviceIntent.putExtra("counter", counter);
@@ -119,4 +82,6 @@ public class HistoryFragment extends Fragment {
         Intent serviceIntent = new Intent(getContext(), ForegroundService.class);
         getActivity().stopService(serviceIntent);
     }
+
+ */
 }

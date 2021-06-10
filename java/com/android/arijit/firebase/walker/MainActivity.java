@@ -14,20 +14,23 @@ import com.google.android.material.bottomnavigation.BottomNavigationView;
 public class MainActivity extends AppCompatActivity implements
         BottomNavigationView.OnNavigationItemSelectedListener, BottomNavigationView.OnNavigationItemReselectedListener {
     private BottomNavigationView bottomNavigationView;
+    private String TAG = "MainActivity";
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        getSupportFragmentManager()
-                .beginTransaction()
-                .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE)
-                .replace(R.id.main_fragment_container,HomeFragment.newInstance(null, null))
-                .commit();
-
+        Log.i(TAG, "onCreate: ");
         bottomNavigationView = findViewById(R.id.navigation);
         bottomNavigationView.setOnNavigationItemSelectedListener(this);
         bottomNavigationView.setOnNavigationItemReselectedListener(this);
+        if(savedInstanceState == null) {
+            getSupportFragmentManager()
+                    .beginTransaction()
+                    .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE)
+                    .replace(R.id.main_fragment_container, HomeFragment.newInstance(null, null))
+                    .commit();
+        }
+
     }
 
     private boolean loadFragment(Fragment fragment){
@@ -62,4 +65,29 @@ public class MainActivity extends AppCompatActivity implements
 
     @Override
     public void onNavigationItemReselected(@NonNull MenuItem item) {}
+
+/**
+ @Override
+    protected void onPause() {
+        super.onPause();
+        Log.i(TAG, "onPause: ");
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        Log.i(TAG, "onResume: ");
+    }
+    @Override
+    protected void onSaveInstanceState(Bundle outstate){
+        super.onSaveInstanceState(outstate);
+        Log.i(TAG, "onSaveInstanceState: ");
+    }
+
+    @Override
+    protected void onRestoreInstanceState(@NonNull Bundle savedInstanceState) {
+        super.onRestoreInstanceState(savedInstanceState);
+        Log.i(TAG, "onRestoreInstanceState: ");
+    }
+    */
 }
