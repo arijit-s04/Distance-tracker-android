@@ -1,8 +1,11 @@
 package com.android.arijit.firebase.walker;
 
+import android.annotation.SuppressLint;
 import android.content.Intent;
+import android.content.res.ColorStateList;
 import android.os.Bundle;
 
+import androidx.appcompat.widget.Toolbar;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
@@ -10,6 +13,8 @@ import android.os.Handler;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
 import android.widget.Button;
 import android.widget.TextView;
 
@@ -60,6 +65,14 @@ public class HistoryFragment extends Fragment {
         }
     }
 
+    /**
+     * datamembers
+     * @param inflater
+     * @param container
+     * @param savedInstanceState
+     * @return
+     */
+
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
@@ -68,7 +81,6 @@ public class HistoryFragment extends Fragment {
         /**
          * init
          */
-        getActivity().setTitle(R.string.title_history);
 
         return root;
     }

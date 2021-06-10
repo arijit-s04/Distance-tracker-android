@@ -2,10 +2,13 @@ package com.android.arijit.firebase.walker;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
 import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 
 import android.os.Bundle;
+import android.os.Handler;
 import android.util.Log;
 import android.view.MenuItem;
 
@@ -21,6 +24,7 @@ public class MainActivity extends AppCompatActivity implements
         setContentView(R.layout.activity_main);
         Log.i(TAG, "onCreate: ");
         bottomNavigationView = findViewById(R.id.navigation);
+
         bottomNavigationView.setOnNavigationItemSelectedListener(this);
         bottomNavigationView.setOnNavigationItemReselectedListener(this);
         if(savedInstanceState == null) {
@@ -35,26 +39,36 @@ public class MainActivity extends AppCompatActivity implements
 
     private boolean loadFragment(Fragment fragment){
         if(fragment == null)    return false;
+
         getSupportFragmentManager()
                 .beginTransaction()
                 .addToBackStack("stack")
                 .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE)
                 .replace(R.id.main_fragment_container,fragment)
                 .commit();
+
         return true;
     }
 
     @Override
     public boolean onNavigationItemSelected(@NonNull  MenuItem item) {
         Fragment fragment;
+        FragmentManager fm = getSupportFragmentManager();
         switch (item.getItemId()){
             case R.id.navigation_home:
-                fragment = HomeFragment.newInstance(null, null);
-                break;
+                fm.popBackStack();
+                return true;
+//                fragment = HomeFragment.newInstance(null, null);
             case R.id.navigation_history:
+                if(fm.getBackStackEntryCount() > 0){
+                    fm.popBackStack();
+                }
                 fragment = HistoryFragment.newInstance(null, null);
                 break;
             case R.id.navigation_settings:
+                if(fm.getBackStackEntryCount() > 0){
+                    fm.popBackStack();
+                }
                 fragment = SettiingsFragment.newInstance(null, null);
                 break;
             default:
@@ -66,7 +80,18 @@ public class MainActivity extends AppCompatActivity implements
     @Override
     public void onNavigationItemReselected(@NonNull MenuItem item) {}
 
-/**
+    @Override
+    public void onBackPressed() {
+        if(bottomNavigationView.getSelectedItemId() == R.id.navigation_home){
+            super.onBackPressed();
+            finish();
+        }
+        else{
+            bottomNavigationView.setSelectedItemId(R.id.navigation_home);
+        }
+    }
+
+    /**
  @Override
     protected void onPause() {
         super.onPause();

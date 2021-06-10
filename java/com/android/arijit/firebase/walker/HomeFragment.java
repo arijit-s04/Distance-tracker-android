@@ -23,6 +23,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.widget.Toolbar;
 import androidx.cardview.widget.CardView;
 import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.Fragment;
@@ -34,8 +35,10 @@ import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.GoogleMapOptions;
 import com.google.android.gms.maps.MapView;
 import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
@@ -63,7 +66,7 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
     private String mParam1;
     private String mParam2;
 
-    private String TAG = "HomeFragment";
+    public static String TAG = "HomeFragment";
 
     public HomeFragment() {
     }
@@ -83,6 +86,9 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
         if (getArguments() != null) {
             mParam1 = getArguments().getString(ARG_PARAM1);
             mParam2 = getArguments().getString(ARG_PARAM2);
+        }
+        if(savedInstanceState!=null) {
+            initLatLng = (LatLng) savedInstanceState.getParcelable("initLatLng");
         }
     }
 
@@ -120,7 +126,6 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
                              Bundle savedInstanceState) {
         Log.i(TAG, "onCreateView: ");
         View root = inflater.inflate(R.layout.fragment_home, container, false);
-        getActivity().setTitle(R.string.title_home);
         mapView = root.findViewById(R.id.mapView);
         /**
          * check location enabled
@@ -146,7 +151,7 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
          */
 
         fabAction.setOnClickListener(v -> {
-            if(!trackState) {
+            if (!trackState) {
                 totDistTravelled = 0.00f;
                 trackState = true;
                 new Handler().post(new Runnable() {
@@ -158,17 +163,20 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
                             public void onAnimationStart(Animation animation) {
                                 tvContainer.setVisibility(View.VISIBLE);
                             }
+
                             @Override
-                            public void onAnimationEnd(Animation animation) {}
+                            public void onAnimationEnd(Animation animation) {
+                            }
+
                             @Override
-                            public void onAnimationRepeat(Animation animation) {}
+                            public void onAnimationRepeat(Animation animation) {
+                            }
                         });
                     }
                 });
 
                 startTrack();
-            }
-            else{
+            } else {
                 trackState = false;
                 tvContainer.startAnimation(disHide);
                 disHide.setAnimationListener(new Animation.AnimationListener() {
@@ -176,16 +184,20 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
                     public void onAnimationStart(Animation animation) {
                         tvContainer.setVisibility(View.INVISIBLE);
                     }
+
                     @Override
-                    public void onAnimationEnd(Animation animation) {}
+                    public void onAnimationEnd(Animation animation) {
+                    }
+
                     @Override
-                    public void onAnimationRepeat(Animation animation) {}
+                    public void onAnimationRepeat(Animation animation) {
+                    }
                 });
                 stopTrack();
             }
         });
 
-        fabCurLocation.setOnClickListener(v ->{
+        fabCurLocation.setOnClickListener(v -> {
             setCurrentLocation();
         });
 
@@ -201,8 +213,13 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
         Log.i(TAG, "onMapReady: ");
 
         mMap = googleMap;
+        GoogleMapOptions gm = new GoogleMapOptions();
+
+        mMap.getUiSettings().setTiltGesturesEnabled(false);
+        mMap.setMaxZoomPreference(16.5f);
+        mMap.setBuildingsEnabled(false);
         mMap.getUiSettings().setMapToolbarEnabled(false);
-        cameraBuilder = new CameraPosition.Builder().tilt(30).zoom(18);
+        cameraBuilder = new CameraPosition.Builder().zoom(15);
         polylineOptions = new PolylineOptions();
         providerClient = LocationServices.getFusedLocationProviderClient(getContext());
 
@@ -271,6 +288,7 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
                     travelCoordinates.add(pos);
                 }
                 tvDistance.setText("Distance travelled : "+distanceFormat(totDistTravelled));
+
                 if(curMarker == null)
                     curMarker = mMap.addMarker(new MarkerOptions().position(pos));
                 else{
@@ -356,14 +374,12 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
     }
     @Override
     public void onResume() {
-        Log.i(TAG, "onResume: ");
         super.onResume();
         mapView.onResume();
     }
 
     @Override
     public void onPause() {
-        Log.i(TAG, "onPause: ");
         super.onPause();
         mapView.onPause();
     }
@@ -377,7 +393,14 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
     @Override
     public void onDestroy() {
         super.onDestroy();
+        if(mapView != null)
         mapView.onDestroy();
+    }
+
+    @Override
+    public void onLowMemory() {
+        super.onLowMemory();
+        mapView.onLowMemory();
     }
 
     @Override
@@ -389,16 +412,6 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
             outstate.putParcelable("initLatLng" , initLatLng);
         }
     }
-
-    @Override
-    public void onViewStateRestored(@Nullable Bundle savedInstanceState) {
-        Log.i(TAG, "onViewStateRestored: ");
-        super.onViewStateRestored(savedInstanceState);
-        if(savedInstanceState!=null) {
-            initLatLng = (LatLng) savedInstanceState.getParcelable("initLatLng");
-        }
-    }
-
 
     private void isLocationEnabled(){
         LocationManager lm = (LocationManager) getContext().getSystemService(Context.LOCATION_SERVICE);

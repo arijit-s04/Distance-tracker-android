@@ -2,6 +2,7 @@ package com.android.arijit.firebase.walker;
 
 import android.os.Bundle;
 
+import androidx.appcompat.widget.Toolbar;
 import androidx.fragment.app.Fragment;
 
 import android.view.LayoutInflater;
@@ -60,7 +61,7 @@ public class SettiingsFragment extends Fragment {
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         View root = inflater.inflate(R.layout.fragment_settiings, container, false);
-        getActivity().setTitle(R.string.title_settings);
+
         return root;
     }
 }
