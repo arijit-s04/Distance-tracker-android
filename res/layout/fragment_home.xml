@@ -18,7 +18,8 @@
         android:layout_gravity="bottom|end"
         android:layout_marginEnd="16dp"
         android:layout_marginBottom="84dp"
-        android:backgroundTint="@color/white"
+        app:tint="@color/gray"
+        app:backgroundTint="@color/white"
         app:borderWidth="0dp"
         />
 
@@ -28,9 +29,12 @@
         android:layout_height="wrap_content"
         android:clickable="true"
         android:layout_margin="16dp"
-        android:src="@drawable/ic_launcher_foreground"
+        android:src="@drawable/ic_baseline_directions_24"
         android:layout_gravity="bottom|end"
-        app:borderWidth="0dp"/>
+        app:borderWidth="0dp"
+        app:tint="@color/white"
+        app:backgroundTint="@color/fab_blue"
+        />
 
     <androidx.cardview.widget.CardView
         android:id="@+id/tv_container"

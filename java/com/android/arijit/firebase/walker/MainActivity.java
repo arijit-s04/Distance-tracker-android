@@ -2,13 +2,11 @@ package com.android.arijit.firebase.walker;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 
 import android.os.Bundle;
-import android.os.Handler;
 import android.util.Log;
 import android.view.MenuItem;
 
@@ -56,9 +54,14 @@ public class MainActivity extends AppCompatActivity implements
         FragmentManager fm = getSupportFragmentManager();
         switch (item.getItemId()){
             case R.id.navigation_home:
+                bottomNavigationView.getMenu()
+                        .findItem(R.id.navigation_home)
+                        .setIcon(R.drawable.ic_baseline_home_24);
+                bottomNavigationView.getMenu()
+                        .findItem(R.id.navigation_settings)
+                        .setIcon(R.drawable.ic_outline_settings_24);
                 fm.popBackStack();
                 return true;
-//                fragment = HomeFragment.newInstance(null, null);
             case R.id.navigation_history:
                 if(fm.getBackStackEntryCount() > 0){
                     fm.popBackStack();
@@ -66,10 +69,16 @@ public class MainActivity extends AppCompatActivity implements
                 fragment = HistoryFragment.newInstance(null, null);
                 break;
             case R.id.navigation_settings:
+                bottomNavigationView.getMenu()
+                        .findItem(R.id.navigation_home)
+                        .setIcon(R.drawable.ic_outline_home_24);
+                bottomNavigationView.getMenu()
+                        .findItem(R.id.navigation_settings)
+                        .setIcon(R.drawable.ic_baseline_settings_24);
                 if(fm.getBackStackEntryCount() > 0){
                     fm.popBackStack();
                 }
-                fragment = SettiingsFragment.newInstance(null, null);
+                fragment = SettingsFragment.newInstance(null, null);
                 break;
             default:
                 fragment = null;

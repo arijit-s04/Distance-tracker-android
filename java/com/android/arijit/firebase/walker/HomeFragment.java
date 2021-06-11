@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.res.Resources;
 import android.location.Location;
 import android.location.LocationManager;
 import android.os.Bundle;
@@ -26,7 +27,9 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.widget.Toolbar;
 import androidx.cardview.widget.CardView;
 import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.Observer;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
@@ -41,6 +44,7 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.MapStyleOptions;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
@@ -82,14 +86,20 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        Log.i(TAG, "onCreate: ");
         super.onCreate(savedInstanceState);
         if (getArguments() != null) {
             mParam1 = getArguments().getString(ARG_PARAM1);
             mParam2 = getArguments().getString(ARG_PARAM2);
         }
-        if(savedInstanceState!=null) {
-            initLatLng = (LatLng) savedInstanceState.getParcelable("initLatLng");
-        }
+
+        cameraBuilder = new CameraPosition.Builder()
+                .zoom(SettingsFragment.CAMERA_ZOOM)
+                .tilt(SettingsFragment.CAMERA_TILT)
+                .bearing(SettingsFragment.CAMERA_BEARING);
+
+        ForegroundService.distInString.observe(this, this.mDistObserver);
+        ForegroundService.curGotPosition.observe(this, this.mTravelCoordinateObserver);
     }
 
     /**
@@ -103,15 +113,13 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
     private TextView tvDistance;
     private CardView tvContainer;
     private FusedLocationProviderClient providerClient;
-    private String[] wantedPerm = {Manifest.permission.ACCESS_FINE_LOCATION};
+    public static String[] wantedPerm = {Manifest.permission.ACCESS_FINE_LOCATION};
     private CameraPosition.Builder cameraBuilder;
     private Marker curMarker;
     private PolylineOptions polylineOptions;
-    private boolean trackState = false;
-    private ArrayList<LatLng> travelCoordinates = new ArrayList<>();
-    private float totDistTravelled = 0f;
+    private static boolean trackState = false;
+    private ArrayList<LatLng> travelCoordinates;
     private LatLng initLatLng;
-    private String TRACK_STATE = "trackState";
 
     /**
      *
@@ -138,7 +146,16 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
         fabCurLocation = root.findViewById(R.id.fab_cur_location);
         tvDistance = root.findViewById(R.id.tv_distance);
         tvContainer = root.findViewById(R.id.tv_container);
-        tvContainer.setVisibility(View.INVISIBLE);
+        travelCoordinates = new ArrayList<>();
+
+        if(!trackState) {
+            tvContainer.setVisibility(View.INVISIBLE);
+        }
+        else{
+            tvDistance.setText(
+                    ForegroundService.distInString.getValue()
+            );
+        }
 
         /**
          * init map
@@ -152,7 +169,6 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
 
         fabAction.setOnClickListener(v -> {
             if (!trackState) {
-                totDistTravelled = 0.00f;
                 trackState = true;
                 new Handler().post(new Runnable() {
                     @Override
@@ -174,8 +190,11 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
                         });
                     }
                 });
-
-                startTrack();
+                if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                        && ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                    ActivityCompat.requestPermissions(getActivity(), wantedPerm, 101);
+                }
+                startService();
             } else {
                 trackState = false;
                 tvContainer.startAnimation(disHide);
@@ -193,7 +212,8 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
                     public void onAnimationRepeat(Animation animation) {
                     }
                 });
-                stopTrack();
+
+                stopService();
             }
         });
 
@@ -213,25 +233,48 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
         Log.i(TAG, "onMapReady: ");
 
         mMap = googleMap;
-        GoogleMapOptions gm = new GoogleMapOptions();
+        try{
+            boolean success = mMap.setMapStyle(MapStyleOptions.loadRawResourceStyle(getContext(), R.raw.style_json));
+            if(!success){
+                Log.i(TAG, "onMapReady: parse failed");
+            }
+        } catch (Resources.NotFoundException e){
+            Log.i(TAG, "onMapReady: style not found");
+        }
 
-        mMap.getUiSettings().setTiltGesturesEnabled(false);
-        mMap.setMaxZoomPreference(16.5f);
-        mMap.setBuildingsEnabled(false);
+        mMap.setMaxZoomPreference(18);
         mMap.getUiSettings().setMapToolbarEnabled(false);
-        cameraBuilder = new CameraPosition.Builder().zoom(15);
         polylineOptions = new PolylineOptions();
         providerClient = LocationServices.getFusedLocationProviderClient(getContext());
 
         if(!trackState && initLatLng != null){
             cameraBuilder.target(initLatLng);
-            Log.i(TAG, "onMapReady: state false "+initLatLng.latitude);
+            cameraBuilder.zoom(SettingsFragment.CAMERA_ZOOM);
+            cameraBuilder.bearing(SettingsFragment.CAMERA_BEARING);
+            cameraBuilder.tilt(SettingsFragment.CAMERA_TILT);
+
             mMap.moveCamera(CameraUpdateFactory.newCameraPosition(cameraBuilder.build()));
             curMarker = mMap.addMarker(new MarkerOptions()
                     .position(initLatLng));
             return;
         }
         else if(trackState){
+            Log.i(TAG, "onMapReady: adding initial "
+                    +ForegroundService.curGotPosition.getValue().size());
+            travelCoordinates = ForegroundService.curGotPosition.getValue();
+            if(travelCoordinates!=null && travelCoordinates.size()>0 ){
+                curMarker = mMap.addMarker(new MarkerOptions()
+                        .position(travelCoordinates.get(travelCoordinates.size() - 1))
+                );
+                for (LatLng l:travelCoordinates){
+                    polylineOptions.add(l);
+                    mMap.addPolyline(polylineOptions);
+                }
+                initLatLng = travelCoordinates.get(travelCoordinates.size() - 1);
+                cameraBuilder.target(travelCoordinates.get(travelCoordinates.size() - 1));
+                mMap.moveCamera(CameraUpdateFactory.newCameraPosition(cameraBuilder.build()));
+            }
+
             return;
         }
 
@@ -239,131 +282,84 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
 
     }
 
-    private void startTrack(){
-        /**
-         * providerClient to provide location service
-         */
-        LocationRequest locationRequest = LocationRequest.create();
-        locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-        locationRequest.setInterval(3000);
-
-        if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
-                && ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(getActivity(), wantedPerm, 101);
-        }
-        providerClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper());
-    }
-    private void stopTrack(){
-        providerClient.removeLocationUpdates(locationCallback);
-    }
-
-
-    //=============
-    LocationCallback locationCallback = new LocationCallback() {
-        @Override
-        public void onLocationResult(@NonNull LocationResult locationResult) {
-            super.onLocationResult(locationResult);
-            List<Location> locationList = locationResult.getLocations();
-            Log.i(TAG, "onLocationResult: start of list");
-            for (Location le:locationList){
-                if(le == null)
-                    continue;
-                double lat = le.getLatitude(), lng = le.getLongitude();
-                Log.i(TAG, "onLocationResult: "+lat+"+"+lng);
-                LatLng pos = new LatLng(lat, lng);
-
-                if(travelCoordinates.isEmpty()){
-                    travelCoordinates.add(pos);
-                }
-                else{
-                    LatLng lastCoor = travelCoordinates.get(travelCoordinates.size()-1);
-                    Location lastLoc = new Location("");
-                    lastLoc.setLatitude(lastCoor.latitude); lastLoc.setLongitude(lastCoor.longitude);
-
-                    float dist = le.distanceTo(lastLoc);
-                    if(dist < 3f) {
-                        continue;
-                    }
-                    totDistTravelled += dist;
-                    travelCoordinates.add(pos);
-                }
-                tvDistance.setText("Distance travelled : "+distanceFormat(totDistTravelled));
-
-                if(curMarker == null)
-                    curMarker = mMap.addMarker(new MarkerOptions().position(pos));
-                else{
-                    MarkerAnimation.animateMarkerToGB(mMap, curMarker, pos, new LatLngInterpolator.Spherical());
-                }
-
-                /**
-                 * keeping current camera features
-                 */
-
-                cameraBuilder.target(pos);
-                cameraBuilder.zoom(mMap.getCameraPosition().zoom);
-                cameraBuilder.tilt(mMap.getCameraPosition().tilt);
-                cameraBuilder.bearing(mMap.getCameraPosition().bearing);
-
-                mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraBuilder.build()));
-
+    Observer<String> mDistObserver = s -> {
+      if(!trackState)
+          return;
+        new Handler().post(new Runnable() {
+            @Override
+            public void run() {
+                tvDistance.setText(s);
             }
+        });
+
+    };
+
+    Observer<ArrayList<LatLng>> mTravelCoordinateObserver = list -> {
+        if(!trackState | list.isEmpty()) return;
+        LatLng nLatLng = list.get(list.size() - 1);
+        if(!travelCoordinates.isEmpty()
+                && nLatLng.equals(travelCoordinates.get(travelCoordinates.size() - 1))){
+            return;
+        }
+        travelCoordinates.add(nLatLng);
+        initLatLng = travelCoordinates.get(travelCoordinates.size() - 1);
+        if(mMap!=null && curMarker != null){
+            MarkerAnimation.animateMarkerToGB(mMap, curMarker, nLatLng, new LatLngInterpolator.Spherical());
         }
     };
 
     private void setCurrentLocation(){
         if(!trackState) {
-            if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
-                    && ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(getActivity(), wantedPerm, 101);
-            }
-            providerClient.getCurrentLocation(LocationRequest.PRIORITY_HIGH_ACCURACY, new CancellationToken() {
-                @Override
-                public boolean isCancellationRequested() {
-                    return false;
-                }
 
-                @NonNull
-                @Override
-                public CancellationToken onCanceledRequested(@NonNull OnTokenCanceledListener onTokenCanceledListener) {
-                    return null;
+            new Thread(() -> {
+                if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                        && ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                    ActivityCompat.requestPermissions(getActivity(), wantedPerm, 101);
                 }
-            })
-                    .addOnSuccessListener(new OnSuccessListener<Location>() {
-                        @Override
-                        public void onSuccess(Location location) {
-                            if (location == null)
-                                return;
-                            initLatLng = new LatLng(location.getLatitude(), location.getLongitude());
-                            if (curMarker == null) {
-                                curMarker = mMap.addMarker(new MarkerOptions()
-                                        .position(initLatLng));
-                            } else {
-                                curMarker.setPosition(initLatLng);
+                providerClient.getCurrentLocation(LocationRequest.PRIORITY_HIGH_ACCURACY, new CancellationToken() {
+                    @Override
+                    public boolean isCancellationRequested() {
+                        return false;
+                    }
+
+                    @NonNull
+                    @Override
+                    public CancellationToken onCanceledRequested(@NonNull OnTokenCanceledListener onTokenCanceledListener) {
+                        return null;
+                    }
+                })
+                        .addOnSuccessListener(new OnSuccessListener<Location>() {
+                            @Override
+                            public void onSuccess(Location location) {
+                                if (location == null)
+                                    return;
+                                initLatLng = new LatLng(location.getLatitude(), location.getLongitude());
+
+                                if (curMarker == null) {
+                                    Log.i(TAG, "onSuccess: null true");
+                                    curMarker = mMap.addMarker(new MarkerOptions()
+                                            .position(initLatLng));
+                                } else {
+                                    Log.i(TAG, "onSuccess: null false " + (mMap==null));
+                                    curMarker.setPosition(initLatLng);
+                                }
+                                cameraBuilder.target(initLatLng);
+                                mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraBuilder.build()));
+
                             }
-                            cameraBuilder.target(initLatLng);
-                            mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraBuilder.build()));
-                        }
-                    })
-                    .addOnFailureListener(new OnFailureListener() {
-                        @Override
-                        public void onFailure(@NonNull Exception e) {
-                            Snackbar.make(getView(), e.getMessage(), Snackbar.LENGTH_LONG).show();
-                        }
-                    });
+                        })
+                        .addOnFailureListener(new OnFailureListener() {
+                            @Override
+                            public void onFailure(@NonNull Exception e) {
+                                Snackbar.make(getView(), e.getMessage(), Snackbar.LENGTH_LONG).show();
+                            }
+                        });
+            }).start();
         }
         else if(travelCoordinates!=null && travelCoordinates.size()>0){
             cameraBuilder.target(travelCoordinates.get(travelCoordinates.size()-1));
+            cameraBuilder.zoom(SettingsFragment.CAMERA_ZOOM);
             mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraBuilder.build()));
-        }
-    }
-
-    private String distanceFormat(float d){
-        if(d>1000f){
-            d = d/1000f;
-            return String.format("%.2f km", d);
-        }
-        else{
-            return String.format("%.2f m", d);
         }
     }
 
@@ -381,6 +377,11 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
     @Override
     public void onPause() {
         super.onPause();
+        if(mMap !=null) {
+            SettingsFragment.CAMERA_ZOOM = mMap.getCameraPosition().zoom;
+            SettingsFragment.CAMERA_TILT = mMap.getCameraPosition().tilt;
+            SettingsFragment.CAMERA_BEARING = mMap.getCameraPosition().bearing;
+        }
         mapView.onPause();
     }
 
@@ -393,24 +394,17 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
     @Override
     public void onDestroy() {
         super.onDestroy();
-        if(mapView != null)
-        mapView.onDestroy();
+        ForegroundService.distInString.removeObserver(this.mDistObserver);
+        ForegroundService.curGotPosition.removeObserver(this.mTravelCoordinateObserver);
+        if(mapView != null) {
+            mapView.onDestroy();
+        }
     }
 
     @Override
     public void onLowMemory() {
         super.onLowMemory();
         mapView.onLowMemory();
-    }
-
-    @Override
-    public void onSaveInstanceState(Bundle outstate){
-        super.onSaveInstanceState(outstate);
-        Log.i(TAG, "onSaveInstanceState: ");
-        outstate.putBoolean(TRACK_STATE, trackState);
-        if(!trackState){
-            outstate.putParcelable("initLatLng" , initLatLng);
-        }
     }
 
     private void isLocationEnabled(){
@@ -434,6 +428,15 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
                     .setNegativeButton(R.string.cancel, null)
                     .show();
         }
+    }
+
+    public void startService(){
+        Intent serviceIntent = new Intent(getContext(), ForegroundService.class);
+        ContextCompat.startForegroundService(getContext(), serviceIntent);
+    }
+    public void stopService() {
+        Intent serviceIntent = new Intent(getContext(), ForegroundService.class);
+        getActivity().stopService(serviceIntent);
     }
 
 }

@@ -8,7 +8,9 @@
         android:fromXScale="1.0"
         android:toXScale="0.0"
         android:duration="300"/>
-    <alpha android:fromAlpha="1.0"
-        android:toAlpha="0.5"/>
+    <alpha
+        android:fromAlpha="1.0"
+        android:toAlpha="0.0"
+        android:duration="300"/>
 
 </set>
