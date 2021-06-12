@@ -22,6 +22,16 @@
         app:backgroundTint="@color/white"
         app:borderWidth="0dp"
         />
+    <TextView
+        android:id="@+id/tv_timer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="3"
+        android:textAppearance="@style/Widget.MaterialComponents.TimePicker.Display"
+        android:layout_gravity="center"
+        android:visibility="gone"
+        />
+
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fab_action"
@@ -60,6 +70,9 @@
             />
     </androidx.cardview.widget.CardView>
 
-
+    <include layout="@layout/layout_card_result"
+        android:id="@+id/container_result"
+        android:visibility="gone"
+        />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

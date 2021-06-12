@@ -44,8 +44,9 @@ public class ForegroundService extends Service {
     private float totDistTravelled;
     private NotificationManager mNotificationManager;
     private NotificationCompat.Builder mNotificationBuilder;
-    public static MutableLiveData<String> distInString = new MutableLiveData<>();
+    public static MutableLiveData<Float> distInMetre = new MutableLiveData<>();
     public static MutableLiveData<ArrayList<LatLng>> curGotPosition = new MutableLiveData<>();
+    public static ResultData result;
 
 
     /**
@@ -54,10 +55,11 @@ public class ForegroundService extends Service {
 
     private void initialize(){
         totDistTravelled = 0.00f;
-        distInString.setValue(this.distanceFormat(0.00f));
+        distInMetre.setValue(totDistTravelled);
         curGotPosition.setValue(new ArrayList<>());
         providerClient = LocationServices.getFusedLocationProviderClient(this);
         mNotificationManager = getSystemService(NotificationManager.class);
+        result = new ResultData();
     }
 
 
@@ -88,6 +90,7 @@ public class ForegroundService extends Service {
 
     @Override
     public void onDestroy() {
+        result = null;
         stopTrack();
         handler.removeCallbacksAndMessages(null);
         getSystemService(NotificationManager.class).cancel(1);
@@ -118,6 +121,7 @@ public class ForegroundService extends Service {
         LocationRequest locationRequest = LocationRequest.create();
         locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
         locationRequest.setInterval(3000);
+        locationRequest.setSmallestDisplacement(3f);
 
         handler.post(new Runnable() {
             @Override
@@ -160,9 +164,9 @@ public class ForegroundService extends Service {
                     lastLoc.setLatitude(lastCoor.latitude); lastLoc.setLongitude(lastCoor.longitude);
 
                     float dist = le.distanceTo(lastLoc);
-                    if(dist < 3f) {
-                        continue;
-                    }
+//                    if(dist < 3f) {
+//                        continue;
+//                    }
                     totDistTravelled += dist;
                     ArrayList<LatLng> tmp = curGotPosition.getValue();
                     tmp.add(pos);
@@ -171,13 +175,13 @@ public class ForegroundService extends Service {
                 Log.i(TAG, "onLocationResult: mutSize "+curGotPosition.getValue().size());
                 mNotificationBuilder.setContentText(distanceFormat(totDistTravelled));
                 mNotificationManager.notify(1, mNotificationBuilder.build());
-                distInString.postValue(distanceFormat(totDistTravelled));
+                distInMetre.postValue(totDistTravelled);
             }
         }
     };
 
     private String distanceFormat(float d){
-        String ret = "Distance traveled : ";
+        String ret = "Distance travelled : ";
         if(d>1000f){
             d = d/1000f;
             return ret+String.format("%.2f km", d);
@@ -186,22 +190,5 @@ public class ForegroundService extends Service {
             return ret+String.format("%.2f m", d);
         }
     }
-/*
-    private void runCounter(NotificationCompat.Builder mNotificationBuilder ){
-        NotificationManager mNotificationManager = getSystemService(NotificationManager.class);
-
-        handler.post(new Runnable() {
-            @Override
-            public void run() {
-                mNotificationBuilder.setContentText(String.valueOf(counter));
-                mNotificationManager.notify(1, mNotificationBuilder.build());
-                counter++;
-                liveCounter.postValue(new Integer(counter));
-                handler.postDelayed(this, 1000);
-            }
-        });
-    }
-*/
-
 
 }

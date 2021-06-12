@@ -20,6 +20,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
+import android.widget.Button;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -93,12 +94,7 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
             mParam2 = getArguments().getString(ARG_PARAM2);
         }
 
-        cameraBuilder = new CameraPosition.Builder()
-                .zoom(SettingsFragment.CAMERA_ZOOM)
-                .tilt(SettingsFragment.CAMERA_TILT)
-                .bearing(SettingsFragment.CAMERA_BEARING);
-
-        ForegroundService.distInString.observe(this, this.mDistObserver);
+        ForegroundService.distInMetre.observe(this, this.mDistObserver);
         ForegroundService.curGotPosition.observe(this, this.mTravelCoordinateObserver);
     }
 
@@ -108,9 +104,9 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
 
     private MapView mapView;
     private GoogleMap mMap;
-    private Animation disReveal, disHide;
+    private Animation disReveal, disHide, countDownZoom, cardReveal, cardHide;
     private FloatingActionButton fabAction, fabCurLocation;
-    private TextView tvDistance;
+    private TextView tvDistance, tvTimer, resultDate, resultTime, resultDistance;
     private CardView tvContainer;
     private FusedLocationProviderClient providerClient;
     public static String[] wantedPerm = {Manifest.permission.ACCESS_FINE_LOCATION};
@@ -120,6 +116,9 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
     private static boolean trackState = false;
     private ArrayList<LatLng> travelCoordinates;
     private LatLng initLatLng;
+    private Button btnCardOk;
+    private ResultData resultToStore;
+    private View resultContainer;
 
     /**
      *
@@ -134,26 +133,13 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
                              Bundle savedInstanceState) {
         Log.i(TAG, "onCreateView: ");
         View root = inflater.inflate(R.layout.fragment_home, container, false);
-        mapView = root.findViewById(R.id.mapView);
-        /**
-         * check location enabled
-         */
-        isLocationEnabled();
+        initialise(root);
 
-        disReveal = AnimationUtils.loadAnimation(getContext(), R.anim.distance_reveal);
-        disHide = AnimationUtils.loadAnimation(getContext(), R.anim.distance_hide);
-        fabAction = root.findViewById(R.id.fab_action);
-        fabCurLocation = root.findViewById(R.id.fab_cur_location);
-        tvDistance = root.findViewById(R.id.tv_distance);
-        tvContainer = root.findViewById(R.id.tv_container);
-        travelCoordinates = new ArrayList<>();
-
-        if(!trackState) {
+        if (!trackState) {
             tvContainer.setVisibility(View.INVISIBLE);
-        }
-        else{
+        } else {
             tvDistance.setText(
-                    ForegroundService.distInString.getValue()
+                    distanceFormat(ForegroundService.distInMetre.getValue())
             );
         }
 
@@ -169,35 +155,11 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
 
         fabAction.setOnClickListener(v -> {
             if (!trackState) {
-                trackState = true;
-                new Handler().post(new Runnable() {
-                    @Override
-                    public void run() {
-                        tvContainer.startAnimation(disReveal);
-                        disReveal.setAnimationListener(new Animation.AnimationListener() {
-                            @Override
-                            public void onAnimationStart(Animation animation) {
-                                tvContainer.setVisibility(View.VISIBLE);
-                            }
-
-                            @Override
-                            public void onAnimationEnd(Animation animation) {
-                            }
-
-                            @Override
-                            public void onAnimationRepeat(Animation animation) {
-                            }
-                        });
-                    }
-                });
-                if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
-                        && ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                    ActivityCompat.requestPermissions(getActivity(), wantedPerm, 101);
-                }
-                startService();
+                countDownStart();
             } else {
                 trackState = false;
                 tvContainer.startAnimation(disHide);
+                getResult();
                 disHide.setAnimationListener(new Animation.AnimationListener() {
                     @Override
                     public void onAnimationStart(Animation animation) {
@@ -221,7 +183,57 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
             setCurrentLocation();
         });
 
+        btnCardOk.setOnClickListener(v -> {
+            new Handler().post(new Runnable() {
+                @Override
+                public void run() {
+                    resultContainer.startAnimation(cardHide);
+                    cardHide.setAnimationListener(new Animation.AnimationListener() {
+                        @Override
+                        public void onAnimationStart(Animation animation) {
+                            (root.findViewById(R.id.container_result)).setVisibility(View.GONE);
+                        }
+
+                        @Override
+                        public void onAnimationEnd(Animation animation) {}
+
+                        @Override
+                        public void onAnimationRepeat(Animation animation) {}
+                    });
+                }
+            });
+        });
+
         return root;
+    }
+
+    private void initialise(View root) {
+        mapView = root.findViewById(R.id.mapView);
+        /**
+         * check location enabled
+         */
+        isLocationEnabled();
+        cameraBuilder = new CameraPosition.Builder()
+                .zoom(SettingsFragment.CAMERA_ZOOM)
+                .tilt(SettingsFragment.CAMERA_TILT)
+                .bearing(SettingsFragment.CAMERA_BEARING);
+        disReveal = AnimationUtils.loadAnimation(getContext(), R.anim.distance_reveal);
+        disHide = AnimationUtils.loadAnimation(getContext(), R.anim.distance_hide);
+        cardReveal = AnimationUtils.loadAnimation(getContext(), R.anim.result_card_reveal);
+        cardHide = AnimationUtils.loadAnimation(getContext(), R.anim.result_card_hide);
+        countDownZoom = AnimationUtils.loadAnimation(getContext(), R.anim.count_down_zoom);
+        fabAction = root.findViewById(R.id.fab_action);
+        fabCurLocation = root.findViewById(R.id.fab_cur_location);
+        tvDistance = root.findViewById(R.id.tv_distance);
+        tvTimer = root.findViewById(R.id.tv_timer);
+        tvContainer = root.findViewById(R.id.tv_container);
+        travelCoordinates = new ArrayList<>();
+        providerClient = LocationServices.getFusedLocationProviderClient(getContext());
+        btnCardOk = root.findViewById(R.id.result_btn_ok);
+        resultContainer = root.findViewById(R.id.container_result);
+        resultDate = root.findViewById(R.id.result_date);
+        resultTime = root.findViewById(R.id.result_time);
+        resultDistance = root.findViewById(R.id.result_distance);
     }
 
     /**
@@ -233,21 +245,20 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
         Log.i(TAG, "onMapReady: ");
 
         mMap = googleMap;
-        try{
+        try {
             boolean success = mMap.setMapStyle(MapStyleOptions.loadRawResourceStyle(getContext(), R.raw.style_json));
-            if(!success){
+            if (!success) {
                 Log.i(TAG, "onMapReady: parse failed");
             }
-        } catch (Resources.NotFoundException e){
+        } catch (Resources.NotFoundException e) {
             Log.i(TAG, "onMapReady: style not found");
         }
 
         mMap.setMaxZoomPreference(18);
         mMap.getUiSettings().setMapToolbarEnabled(false);
         polylineOptions = new PolylineOptions();
-        providerClient = LocationServices.getFusedLocationProviderClient(getContext());
 
-        if(!trackState && initLatLng != null){
+        if (!trackState && initLatLng != null) {
             cameraBuilder.target(initLatLng);
             cameraBuilder.zoom(SettingsFragment.CAMERA_ZOOM);
             cameraBuilder.bearing(SettingsFragment.CAMERA_BEARING);
@@ -257,16 +268,15 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
             curMarker = mMap.addMarker(new MarkerOptions()
                     .position(initLatLng));
             return;
-        }
-        else if(trackState){
+        } else if (trackState) {
             Log.i(TAG, "onMapReady: adding initial "
-                    +ForegroundService.curGotPosition.getValue().size());
+                    + ForegroundService.curGotPosition.getValue().size());
             travelCoordinates = ForegroundService.curGotPosition.getValue();
-            if(travelCoordinates!=null && travelCoordinates.size()>0 ){
+            if (travelCoordinates != null && travelCoordinates.size() > 0) {
                 curMarker = mMap.addMarker(new MarkerOptions()
                         .position(travelCoordinates.get(travelCoordinates.size() - 1))
                 );
-                for (LatLng l:travelCoordinates){
+                for (LatLng l : travelCoordinates) {
                     polylineOptions.add(l);
                     mMap.addPolyline(polylineOptions);
                 }
@@ -282,34 +292,40 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
 
     }
 
-    Observer<String> mDistObserver = s -> {
-      if(!trackState)
-          return;
+    Observer<Float> mDistObserver = f -> {
+        if (!trackState)
+            return;
         new Handler().post(new Runnable() {
             @Override
             public void run() {
-                tvDistance.setText(s);
+                tvDistance.setText(distanceFormat(f));
             }
         });
 
     };
 
     Observer<ArrayList<LatLng>> mTravelCoordinateObserver = list -> {
-        if(!trackState | list.isEmpty()) return;
-        LatLng nLatLng = list.get(list.size() - 1);
-        if(!travelCoordinates.isEmpty()
-                && nLatLng.equals(travelCoordinates.get(travelCoordinates.size() - 1))){
-            return;
-        }
-        travelCoordinates.add(nLatLng);
+        if (!trackState | list.isEmpty()) return;
+
+        travelCoordinates = list;
         initLatLng = travelCoordinates.get(travelCoordinates.size() - 1);
-        if(mMap!=null && curMarker != null){
-            MarkerAnimation.animateMarkerToGB(mMap, curMarker, nLatLng, new LatLngInterpolator.Spherical());
+        if (mMap != null && curMarker != null) {
+            MarkerAnimation.animateMarkerToGB(mMap, curMarker, initLatLng, new LatLngInterpolator.Spherical());
         }
     };
 
-    private void setCurrentLocation(){
-        if(!trackState) {
+    private String distanceFormat(float d){
+        String ret = "Distance travelled : ";
+        if(d>1000f){
+            d = d/1000f;
+            return ret+String.format("%.2f km", d);
+        }
+        else{
+            return ret+String.format("%.2f m", d);
+        }
+    }
+    private void setCurrentLocation() {
+        if (!trackState) {
 
             new Thread(() -> {
                 if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
@@ -328,36 +344,29 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
                         return null;
                     }
                 })
-                        .addOnSuccessListener(new OnSuccessListener<Location>() {
-                            @Override
-                            public void onSuccess(Location location) {
-                                if (location == null)
-                                    return;
-                                initLatLng = new LatLng(location.getLatitude(), location.getLongitude());
+                .addOnSuccessListener(location -> {
+                    if (location == null)
+                        return;
+                    initLatLng = new LatLng(location.getLatitude(), location.getLongitude());
 
-                                if (curMarker == null) {
-                                    Log.i(TAG, "onSuccess: null true");
-                                    curMarker = mMap.addMarker(new MarkerOptions()
-                                            .position(initLatLng));
-                                } else {
-                                    Log.i(TAG, "onSuccess: null false " + (mMap==null));
-                                    curMarker.setPosition(initLatLng);
-                                }
-                                cameraBuilder.target(initLatLng);
-                                mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraBuilder.build()));
+                    if (curMarker == null) {
+                        Log.i(TAG, "onSuccess: null true");
+                        curMarker = mMap.addMarker(new MarkerOptions()
+                                .position(initLatLng));
+                    } else {
+                        Log.i(TAG, "onSuccess: null false " + (mMap == null));
+                        curMarker.setPosition(initLatLng);
+                    }
+                    cameraBuilder.target(initLatLng);
+                    mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraBuilder.build()));
 
-                            }
-                        })
-                        .addOnFailureListener(new OnFailureListener() {
-                            @Override
-                            public void onFailure(@NonNull Exception e) {
-                                Snackbar.make(getView(), e.getMessage(), Snackbar.LENGTH_LONG).show();
-                            }
-                        });
+                })
+                .addOnFailureListener(e -> {
+                    Snackbar.make(getView(), e.getMessage(), Snackbar.LENGTH_LONG).show();
+                });
             }).start();
-        }
-        else if(travelCoordinates!=null && travelCoordinates.size()>0){
-            cameraBuilder.target(travelCoordinates.get(travelCoordinates.size()-1));
+        } else if (travelCoordinates != null && travelCoordinates.size() > 0) {
+            cameraBuilder.target(travelCoordinates.get(travelCoordinates.size() - 1));
             cameraBuilder.zoom(SettingsFragment.CAMERA_ZOOM);
             mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraBuilder.build()));
         }
@@ -368,6 +377,7 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
         super.onStart();
         mapView.onStart();
     }
+
     @Override
     public void onResume() {
         super.onResume();
@@ -377,7 +387,7 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
     @Override
     public void onPause() {
         super.onPause();
-        if(mMap !=null) {
+        if (mMap != null) {
             SettingsFragment.CAMERA_ZOOM = mMap.getCameraPosition().zoom;
             SettingsFragment.CAMERA_TILT = mMap.getCameraPosition().tilt;
             SettingsFragment.CAMERA_BEARING = mMap.getCameraPosition().bearing;
@@ -394,9 +404,9 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
     @Override
     public void onDestroy() {
         super.onDestroy();
-        ForegroundService.distInString.removeObserver(this.mDistObserver);
+        ForegroundService.distInMetre.removeObserver(this.mDistObserver);
         ForegroundService.curGotPosition.removeObserver(this.mTravelCoordinateObserver);
-        if(mapView != null) {
+        if (mapView != null) {
             mapView.onDestroy();
         }
     }
@@ -407,16 +417,18 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
         mapView.onLowMemory();
     }
 
-    private void isLocationEnabled(){
+    private void isLocationEnabled() {
         LocationManager lm = (LocationManager) getContext().getSystemService(Context.LOCATION_SERVICE);
         boolean gpsEnabled = false, netEnabled = false;
-        try{
+        try {
             gpsEnabled = lm.isProviderEnabled(LocationManager.GPS_PROVIDER);
-        } catch (Exception e){}
-        try{
+        } catch (Exception e) {
+        }
+        try {
             netEnabled = lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
-        } catch (Exception e){}
-        if(!gpsEnabled && !netEnabled){
+        } catch (Exception e) {
+        }
+        if (!gpsEnabled && !netEnabled) {
             new AlertDialog.Builder(getContext())
                     .setMessage(R.string.gps_not_enabled)
                     .setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
@@ -430,13 +442,99 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
         }
     }
 
-    public void startService(){
+    public void startService() {
         Intent serviceIntent = new Intent(getContext(), ForegroundService.class);
         ContextCompat.startForegroundService(getContext(), serviceIntent);
     }
+
     public void stopService() {
         Intent serviceIntent = new Intent(getContext(), ForegroundService.class);
         getActivity().stopService(serviceIntent);
     }
 
+
+    private void countDownStart() {
+        //==========
+        LocationRequest locationRequest = LocationRequest.create();
+        locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+        locationRequest.setInterval(1000);
+        if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+        providerClient.requestLocationUpdates(locationRequest, mLocationCallback, Looper.getMainLooper());
+        //==========
+        final int[] time = {3};
+        tvTimer.setVisibility(View.VISIBLE);
+        Handler countDown = new Handler();
+        countDown.post(new Runnable() {
+            @Override
+            public void run() {
+                if(time[0] >0){
+                    if(fabAction.isEnabled())   fabAction.setEnabled(false);
+                    tvTimer.setText(String.valueOf(time[0]));
+                    tvTimer.startAnimation(countDownZoom);
+                    time[0]--;
+                    countDown.postDelayed(this, 1000);
+                }
+                else{
+                    if(!fabAction.isEnabled())   fabAction.setEnabled(true);
+                    providerClient.removeLocationUpdates(mLocationCallback);
+                    tvTimer.setVisibility(View.GONE);
+                    trackState = true;
+                    tvContainer.startAnimation(disReveal);
+                    disReveal.setAnimationListener(new Animation.AnimationListener() {
+                        @Override
+                        public void onAnimationStart(Animation animation) {
+                            tvContainer.setVisibility(View.VISIBLE);
+                        }
+
+                        @Override
+                        public void onAnimationEnd(Animation animation) {
+                        }
+
+                        @Override
+                        public void onAnimationRepeat(Animation animation) {
+                        }
+                    });
+                    if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                            && ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                        ActivityCompat.requestPermissions(getActivity(), wantedPerm, 101);
+                    }
+                    startService();
+                }
+            }
+        });
+    }
+
+    final LocationCallback mLocationCallback = new LocationCallback() {
+        @Override
+        public void onLocationResult(@NonNull LocationResult locationResult) {
+            super.onLocationResult(locationResult);
+            List<Location> locationList = locationResult.getLocations();
+            if (!locationList.isEmpty()) {
+                initLatLng = new LatLng(locationList.get(locationList.size() - 1).getLatitude(),
+                        locationList.get(locationList.size() - 1).getLongitude());
+                if(curMarker != null)
+                    curMarker.setPosition(initLatLng);
+            }
+        }
+    };
+    private void getResult(){
+        this.resultToStore = ForegroundService.result;
+        this.resultToStore.setDistanceTravelled(ForegroundService.distInMetre.getValue());
+        this.resultToStore.setTravelCoordinates(this.travelCoordinates);
+        // TODO: 12/06/21 add the firebase method to upload the data
+        Log.i(TAG, "getResult: "+resultToStore.getTime()+" "+resultToStore.getDistanceTravelled());
+
+        /**
+         * add firebase above this
+         */
+        new Handler().post(() -> {
+            resultDistance.setText(distanceFormat(resultToStore.getDistanceTravelled()));
+            resultDate.setText(resultToStore.getDate());
+            resultTime.setText(resultToStore.getTime());
+            resultContainer.setVisibility(View.VISIBLE);
+            resultContainer.startAnimation(cardReveal);
+        });
+    }
 }
