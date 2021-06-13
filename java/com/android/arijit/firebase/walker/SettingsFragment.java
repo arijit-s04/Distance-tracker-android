@@ -46,6 +46,17 @@ public class SettingsFragment extends Fragment {
         return fragment;
     }
 
+    public static String distanceFormat(float d){
+        String ret = "Distance travelled : ";
+        if(d>1000f){
+            d = d/1000f;
+            return ret+String.format("%.2f km", d);
+        }
+        else{
+            return ret+String.format("%.2f m", d);
+        }
+    }
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);

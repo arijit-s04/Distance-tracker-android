@@ -56,6 +56,7 @@ import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.OnTokenCanceledListener;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.snackbar.Snackbar;
+import com.google.firebase.auth.FirebaseAuth;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -139,7 +140,7 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
             tvContainer.setVisibility(View.INVISIBLE);
         } else {
             tvDistance.setText(
-                    distanceFormat(ForegroundService.distInMetre.getValue())
+                    SettingsFragment.distanceFormat(ForegroundService.distInMetre.getValue())
             );
         }
 
@@ -195,7 +196,13 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
                         }
 
                         @Override
-                        public void onAnimationEnd(Animation animation) {}
+                        public void onAnimationEnd(Animation animation) {
+                            mMap.clear();
+                            if(curMarker != null){
+                                curMarker = mMap.addMarker(new MarkerOptions().position(curMarker.getPosition()));
+                            }
+                            setCurrentLocation();
+                        }
 
                         @Override
                         public void onAnimationRepeat(Animation animation) {}
@@ -269,8 +276,6 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
                     .position(initLatLng));
             return;
         } else if (trackState) {
-            Log.i(TAG, "onMapReady: adding initial "
-                    + ForegroundService.curGotPosition.getValue().size());
             travelCoordinates = ForegroundService.curGotPosition.getValue();
             if (travelCoordinates != null && travelCoordinates.size() > 0) {
                 curMarker = mMap.addMarker(new MarkerOptions()
@@ -298,7 +303,7 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
         new Handler().post(new Runnable() {
             @Override
             public void run() {
-                tvDistance.setText(distanceFormat(f));
+                tvDistance.setText(SettingsFragment.distanceFormat(f));
             }
         });
 
@@ -314,16 +319,6 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
         }
     };
 
-    private String distanceFormat(float d){
-        String ret = "Distance travelled : ";
-        if(d>1000f){
-            d = d/1000f;
-            return ret+String.format("%.2f km", d);
-        }
-        else{
-            return ret+String.format("%.2f m", d);
-        }
-    }
     private void setCurrentLocation() {
         if (!trackState) {
 
@@ -357,6 +352,7 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
                         Log.i(TAG, "onSuccess: null false " + (mMap == null));
                         curMarker.setPosition(initLatLng);
                     }
+                    cameraBuilder.zoom(16);
                     cameraBuilder.target(initLatLng);
                     mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraBuilder.build()));
 
@@ -525,12 +521,12 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
         this.resultToStore.setTravelCoordinates(this.travelCoordinates);
         // TODO: 12/06/21 add the firebase method to upload the data
         Log.i(TAG, "getResult: "+resultToStore.getTime()+" "+resultToStore.getDistanceTravelled());
-
+        FirebaseHelper.storeData(resultToStore, mapView);
         /**
          * add firebase above this
          */
         new Handler().post(() -> {
-            resultDistance.setText(distanceFormat(resultToStore.getDistanceTravelled()));
+            resultDistance.setText(SettingsFragment.distanceFormat(resultToStore.getDistanceTravelled()));
             resultDate.setText(resultToStore.getDate());
             resultTime.setText(resultToStore.getTime());
             resultContainer.setVisibility(View.VISIBLE);

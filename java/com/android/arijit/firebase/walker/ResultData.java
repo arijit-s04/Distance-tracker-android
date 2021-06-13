@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Locale;
 
 public class ResultData {
+    private String id;
     private String date, time;
     private float distanceTravelled;
     private ArrayList<LatLng> travelCoordinates;
@@ -14,6 +15,14 @@ public class ResultData {
         java.util.Date d = new java.util.Date();
         this.date = new SimpleDateFormat("MMM d yyyy", Locale.getDefault()).format(d);
         this.time = new SimpleDateFormat("HH:mm a", Locale.getDefault()).format(d);
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
     }
 
     public String getDate() {

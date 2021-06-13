@@ -33,6 +33,8 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.android.arijit.firebase.walker.SettingsFragment.distanceFormat;
+
 public class ForegroundService extends Service {
     /**
      * data members
@@ -164,9 +166,9 @@ public class ForegroundService extends Service {
                     lastLoc.setLatitude(lastCoor.latitude); lastLoc.setLongitude(lastCoor.longitude);
 
                     float dist = le.distanceTo(lastLoc);
-//                    if(dist < 3f) {
-//                        continue;
-//                    }
+                    if(dist < 3f) {
+                        continue;
+                    }
                     totDistTravelled += dist;
                     ArrayList<LatLng> tmp = curGotPosition.getValue();
                     tmp.add(pos);
@@ -180,15 +182,5 @@ public class ForegroundService extends Service {
         }
     };
 
-    private String distanceFormat(float d){
-        String ret = "Distance travelled : ";
-        if(d>1000f){
-            d = d/1000f;
-            return ret+String.format("%.2f km", d);
-        }
-        else{
-            return ret+String.format("%.2f m", d);
-        }
-    }
 
 }

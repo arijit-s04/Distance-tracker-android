@@ -8,8 +8,13 @@ import android.os.Bundle;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.Observer;
+import androidx.recyclerview.widget.DividerItemDecoration;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import android.os.Handler;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -18,6 +23,10 @@ import android.view.animation.AnimationUtils;
 import android.widget.Button;
 import android.widget.TextView;
 
+import com.google.firebase.auth.FirebaseAuth;
+
+import java.util.ArrayList;
+
 /**
  * A simple {@link Fragment} subclass.
  * Use the {@link HistoryFragment#newInstance} factory method to
@@ -25,8 +34,6 @@ import android.widget.TextView;
  */
 public class HistoryFragment extends Fragment {
 
-    // TODO: Rename parameter arguments, choose names that match
-    // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
     private static final String ARG_PARAM1 = "param1";
     private static final String ARG_PARAM2 = "param2";
 
@@ -63,15 +70,26 @@ public class HistoryFragment extends Fragment {
             mParam1 = getArguments().getString(ARG_PARAM1);
             mParam2 = getArguments().getString(ARG_PARAM2);
         }
+        FirebaseHelper.liveResultData.observe(this, this.resultDataListObserver);
     }
 
+    private RecyclerView recyclerView;
+    private ArrayList<ResultData> resultDataArrayList;
+    private String TAG = "HistoryFragment";
     /**
-     * datamembers
-     * @param inflater
-     * @param container
-     * @param savedInstanceState
-     * @return
+     * data members
      */
+
+    Observer<ArrayList<ResultData>> resultDataListObserver = new Observer<ArrayList<ResultData>>() {
+        @Override
+        public void onChanged(ArrayList<ResultData> resultData) {
+            resultDataArrayList = resultData;
+            if(recyclerView !=null && resultDataArrayList!= null){
+                ResultDataAdapter mAdapter = new ResultDataAdapter(getContext(), resultDataArrayList);
+                recyclerView.setAdapter(mAdapter);
+            }
+        }
+    };
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -81,19 +99,13 @@ public class HistoryFragment extends Fragment {
         /**
          * init
          */
+        resultDataArrayList = new ArrayList<>();
+        recyclerView=root.findViewById(R.id.recView);
+        recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
+
+        FirebaseHelper.fetchData(root);
 
         return root;
     }
-/*
-    public void startService(){
-        Intent serviceIntent = new Intent(getContext(), ForegroundService.class);
-        serviceIntent.putExtra("counter", counter);
-        ContextCompat.startForegroundService(getContext(), serviceIntent);
-    }
-    public void stopService() {
-        Intent serviceIntent = new Intent(getContext(), ForegroundService.class);
-        getActivity().stopService(serviceIntent);
-    }
 
- */
 }
