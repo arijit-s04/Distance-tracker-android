@@ -3,11 +3,15 @@ package com.android.arijit.firebase.walker;
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.res.ColorStateList;
+import android.content.res.Resources;
 import android.os.Bundle;
 
+import androidx.activity.OnBackPressedCallback;
+import androidx.annotation.NonNull;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.Observer;
 import androidx.recyclerview.widget.DividerItemDecoration;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -23,6 +27,16 @@ import android.view.animation.AnimationUtils;
 import android.widget.Button;
 import android.widget.TextView;
 
+import com.google.android.gms.maps.CameraUpdateFactory;
+import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.MapView;
+import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.model.CameraPosition;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.MapStyleOptions;
+import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.PolylineOptions;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.auth.FirebaseAuth;
 
 import java.util.ArrayList;
@@ -32,7 +46,7 @@ import java.util.ArrayList;
  * Use the {@link HistoryFragment#newInstance} factory method to
  * create an instance of this fragment.
  */
-public class HistoryFragment extends Fragment {
+public class HistoryFragment extends Fragment implements OnMapReadyCallback {
 
     private static final String ARG_PARAM1 = "param1";
     private static final String ARG_PARAM2 = "param2";
@@ -71,11 +85,71 @@ public class HistoryFragment extends Fragment {
             mParam2 = getArguments().getString(ARG_PARAM2);
         }
         FirebaseHelper.liveResultData.observe(this, this.resultDataListObserver);
+        mapToShow.setValue(Boolean.FALSE);
+
+        /**
+         * show the map on clicking a record
+         */
+        mapToShow.observe(this, new Observer<Boolean>() {
+            @Override
+            public void onChanged(Boolean aBoolean) {
+                if(aBoolean == false)
+                    return;
+                if(mapPopupContainer!=null && mapPopupContainer.getVisibility()==View.GONE){
+                    new Handler().post(()->{
+                        mapPopupContainer.setVisibility(View.VISIBLE);
+                        mapPopupContainer.startAnimation(mapPopupReveal);
+                    });
+                    ArrayList<LatLng> travelCoor = resultDataArrayList
+                            .get(clickedPosition).getTravelCoordinates();
+                    LatLng end = travelCoor.get(travelCoor.size() - 1);
+                    LatLng stt = travelCoor.get(0);
+                    //end marker
+                    mMap.addMarker(new MarkerOptions().position(end).title("End"));
+                    //start marker
+                    mMap.addMarker(new MarkerOptions().position(stt).title("Start"));
+
+                    mMap.addPolyline(new PolylineOptions().addAll(travelCoor));
+                    mMap.moveCamera(
+                            CameraUpdateFactory.newCameraPosition(
+                                    CameraPosition.builder()
+                                            .target(end)
+                                            .zoom(16)
+                                            .build()
+                            )
+                    );
+                }
+            }
+        });
+        /**
+         * backPress handler in fragment
+         */
+        getActivity().getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                if(mapPopupContainer.getVisibility()==View.VISIBLE){
+                    mMap.clear();
+                    mapPopupContainer.setVisibility(View.GONE);
+                    mapToShow.setValue(false);
+                }
+                else {
+                    ((BottomNavigationView)getActivity().findViewById(R.id.navigation))
+                            .setSelectedItemId(R.id.navigation_home);
+                }
+            }
+        });
+
     }
 
+    private View mapPopupContainer;
     private RecyclerView recyclerView;
     private ArrayList<ResultData> resultDataArrayList;
     private String TAG = "HistoryFragment";
+    public static MutableLiveData<Boolean> mapToShow = new MutableLiveData<>();
+    private Animation mapPopupReveal;
+    private MapView mapView;
+    private GoogleMap mMap;
+    public static int clickedPosition;
     /**
      * data members
      */
@@ -85,7 +159,7 @@ public class HistoryFragment extends Fragment {
         public void onChanged(ArrayList<ResultData> resultData) {
             resultDataArrayList = resultData;
             if(recyclerView !=null && resultDataArrayList!= null){
-                ResultDataAdapter mAdapter = new ResultDataAdapter(getContext(), resultDataArrayList);
+                ResultDataAdapter mAdapter = new ResultDataAdapter(getContext(), getView(), resultDataArrayList);
                 recyclerView.setAdapter(mAdapter);
             }
         }
@@ -99,13 +173,73 @@ public class HistoryFragment extends Fragment {
         /**
          * init
          */
+        mapPopupReveal = AnimationUtils.loadAnimation(getContext(), R.anim.map_popup_reveal);
+        mapPopupContainer = root.findViewById(R.id.map_popup_container);
         resultDataArrayList = new ArrayList<>();
         recyclerView=root.findViewById(R.id.recView);
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
+
+        mapView = root.findViewById(R.id.history_map_view);
+        mapView.onCreate(savedInstanceState);
+        mapView.getMapAsync(this::onMapReady);
 
         FirebaseHelper.fetchData(root);
 
         return root;
     }
 
+    @Override
+    public void onMapReady(@NonNull GoogleMap googleMap) {
+        mMap = googleMap;
+        mMap = googleMap;
+        try {
+            boolean success = mMap.setMapStyle(MapStyleOptions.loadRawResourceStyle(getContext(), R.raw.style_json));
+            if (!success) {
+                Log.i(TAG, "onMapReady: parse failed");
+            }
+        } catch (Resources.NotFoundException e) {
+            Log.i(TAG, "onMapReady: style not found");
+        }
+
+        mMap.setMaxZoomPreference(18);
+        mMap.getUiSettings().setMapToolbarEnabled(false);
+    }
+
+
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        mapView.onStart();
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        mapView.onResume();
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        mapView.onPause();
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+        mapView.onStop();
+    }
+
+    @Override
+    public void onLowMemory() {
+        super.onLowMemory();
+        mapView.onLowMemory();
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        mapView.onDestroy();
+    }
 }

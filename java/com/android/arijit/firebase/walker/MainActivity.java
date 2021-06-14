@@ -12,9 +12,11 @@ import android.view.MenuItem;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 
+import java.util.List;
+
 public class MainActivity extends AppCompatActivity implements
         BottomNavigationView.OnNavigationItemSelectedListener, BottomNavigationView.OnNavigationItemReselectedListener {
-    private BottomNavigationView bottomNavigationView;
+    public static BottomNavigationView bottomNavigationView;
     private String TAG = "MainActivity";
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -89,39 +91,15 @@ public class MainActivity extends AppCompatActivity implements
     @Override
     public void onNavigationItemReselected(@NonNull MenuItem item) {}
 
-    @Override
-    public void onBackPressed() {
-        if(bottomNavigationView.getSelectedItemId() == R.id.navigation_home){
-            super.onBackPressed();
-            finish();
-        }
-        else{
-            bottomNavigationView.setSelectedItemId(R.id.navigation_home);
-        }
-    }
+//    @Override
+//    public void onBackPressed() {
+//        if(bottomNavigationView.getSelectedItemId() == R.id.navigation_home){
+//            super.onBackPressed();
+//            finish();
+//        }
+//        else{
+//            bottomNavigationView.setSelectedItemId(R.id.navigation_home);
+//        }
+//    }
 
-    /**
- @Override
-    protected void onPause() {
-        super.onPause();
-        Log.i(TAG, "onPause: ");
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        Log.i(TAG, "onResume: ");
-    }
-    @Override
-    protected void onSaveInstanceState(Bundle outstate){
-        super.onSaveInstanceState(outstate);
-        Log.i(TAG, "onSaveInstanceState: ");
-    }
-
-    @Override
-    protected void onRestoreInstanceState(@NonNull Bundle savedInstanceState) {
-        super.onRestoreInstanceState(savedInstanceState);
-        Log.i(TAG, "onRestoreInstanceState: ");
-    }
-    */
 }

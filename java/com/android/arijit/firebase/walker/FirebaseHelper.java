@@ -87,10 +87,20 @@ public class FirebaseHelper {
                                 res.setDate(docSnap.getString(DATE));
                                 res.setTime(docSnap.getString(TIME));
                                 res.setDistanceTravelled(Float.valueOf(docSnap.get(DISTANCE).toString()));
-                                res.setTravelCoordinates((ArrayList<LatLng>) docSnap.get(TRAVEL_COORDINATES));
+                                ArrayList<Object> tmp = (ArrayList<Object>) docSnap.get(TRAVEL_COORDINATES);
+                                ArrayList<LatLng> toPutInRes = new ArrayList<>();
+                                for (Object ob:tmp){
+                                    HashMap<String, Double> hash = (HashMap<String, Double>) ob;
+                                    LatLng each = new LatLng(
+                                            hash.get("latitude"), hash.get("longitude")
+                                    );
+                                    toPutInRes.add(each);
+                                }
+                                res.setTravelCoordinates(toPutInRes);
+
                                 fetchedData.add(res);
                             }
-                            Log.i(TAG, "onComplete: "+fetchedData.size());
+
                             liveResultData.postValue(fetchedData);
                         }
                         else{
@@ -117,10 +127,10 @@ public class FirebaseHelper {
                 .document(id)
                 .delete()
                 .addOnSuccessListener(unused -> {
-                    Snackbar.make(v, "Deleted", Snackbar.LENGTH_LONG);
+                    Snackbar.make(v, "Deleted", Snackbar.LENGTH_LONG).show();
                 })
                 .addOnFailureListener(e -> {
-                    Snackbar.make(v, "Something went wrong", Snackbar.LENGTH_LONG);
+                    Snackbar.make(v ,"Something went wrong", Snackbar.LENGTH_LONG).show();
                     Log.i(TAG, "deleteData: "+e.getMessage());
                 });
     }

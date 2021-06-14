@@ -37,8 +37,9 @@
                 android:layout_height="wrap_content"
                 android:background="@drawable/ripple_circular"
                 android:padding="8dp"
-                android:src="@drawable/ic_baseline_delete_outline_24"
-                app:tint="@color/danger_red" />
+                android:src="@drawable/ic_outline_delete_forever_24"
+                app:tint="@color/danger_red"
+                android:tooltipText="Delete"/>
         </LinearLayout>
 
         <TextView

@@ -12,4 +12,9 @@
         android:fadingEdge="horizontal"
         />
 
+    <include
+        android:id="@+id/map_popup_container"
+        layout="@layout/layout_card_map_popup"
+        android:visibility="gone"/>
+
 </FrameLayout>

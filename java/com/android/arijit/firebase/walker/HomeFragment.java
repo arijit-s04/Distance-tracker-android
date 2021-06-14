@@ -114,7 +114,7 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
     private CameraPosition.Builder cameraBuilder;
     private Marker curMarker;
     private PolylineOptions polylineOptions;
-    private static boolean trackState = false;
+    public static boolean trackState = false;
     private ArrayList<LatLng> travelCoordinates;
     private LatLng initLatLng;
     private Button btnCardOk;
@@ -135,6 +135,9 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
         Log.i(TAG, "onCreateView: ");
         View root = inflater.inflate(R.layout.fragment_home, container, false);
         initialise(root);
+        if(savedInstanceState != null){
+            initLatLng = (LatLng) savedInstanceState.getParcelable("initlatlng");
+        }
 
         if (!trackState) {
             tvContainer.setVisibility(View.INVISIBLE);
@@ -249,8 +252,6 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
      */
     @Override
     public void onMapReady(@NonNull GoogleMap googleMap) {
-        Log.i(TAG, "onMapReady: ");
-
         mMap = googleMap;
         try {
             boolean success = mMap.setMapStyle(MapStyleOptions.loadRawResourceStyle(getContext(), R.raw.style_json));
@@ -389,6 +390,12 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
             SettingsFragment.CAMERA_BEARING = mMap.getCameraPosition().bearing;
         }
         mapView.onPause();
+    }
+
+    @Override
+    public void onSaveInstanceState(Bundle outstate){
+        outstate.putParcelable("initlatlng", initLatLng);
+        super.onSaveInstanceState(outstate);
     }
 
     @Override

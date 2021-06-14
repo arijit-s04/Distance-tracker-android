@@ -17,6 +17,9 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.material.snackbar.Snackbar;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,10 +28,12 @@ public class ResultDataAdapter extends RecyclerView.Adapter<ResultDataAdapter.re
     private Context context;
     private ArrayList<ResultData> dataArrayList;
     private FragmentManager mFragmentManager;
+    private View root;
 
-    public ResultDataAdapter(Context context, ArrayList<ResultData> dataList) {
+    public ResultDataAdapter(Context context, View root, ArrayList<ResultData> dataList) {
         this.dataArrayList = dataList;
         this.context = context;
+        this.root = root;
     }
 
     @NonNull
@@ -43,7 +48,16 @@ public class ResultDataAdapter extends RecyclerView.Adapter<ResultDataAdapter.re
     @Override
     public void onBindViewHolder(@NonNull  ResultDataAdapter.resultViewHolder holder, int position) {
         holder.bindData(dataArrayList.get(position), position);
-        holder.itemView.setOnClickListener(v -> {});
+        holder.itemView.setOnClickListener(v -> {
+            if(!HomeFragment.trackState) {
+                HistoryFragment.clickedPosition = position;
+                HistoryFragment.mapToShow.postValue(true);
+            }
+            else {
+                Snackbar.make(root, "Please check the history map after recording", Snackbar.LENGTH_SHORT)
+                        .show();
+            }
+        });
     }
 
     @Override
@@ -87,7 +101,7 @@ public class ResultDataAdapter extends RecyclerView.Adapter<ResultDataAdapter.re
                                  * delete the item
                                  */
                                 String id = getItem(position).getId();
-                                FirebaseHelper.deleteData(id, itemView);
+                                FirebaseHelper.deleteData(id, root);
                                 dataArrayList.remove(position);
                                 notifyDataSetChanged();
                             }
