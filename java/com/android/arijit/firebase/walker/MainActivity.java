@@ -2,10 +2,13 @@ package com.android.arijit.firebase.walker;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDelegate;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.MenuItem;
@@ -20,6 +23,7 @@ public class MainActivity extends AppCompatActivity implements
     private String TAG = "MainActivity";
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        initSettings();
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         Log.i(TAG, "onCreate: ");
@@ -65,6 +69,12 @@ public class MainActivity extends AppCompatActivity implements
                 fm.popBackStack();
                 return true;
             case R.id.navigation_history:
+                bottomNavigationView.getMenu()
+                        .findItem(R.id.navigation_home)
+                        .setIcon(R.drawable.ic_outline_home_24);
+                bottomNavigationView.getMenu()
+                        .findItem(R.id.navigation_settings)
+                        .setIcon(R.drawable.ic_outline_settings_24);
                 if(fm.getBackStackEntryCount() > 0){
                     fm.popBackStack();
                 }
@@ -91,15 +101,42 @@ public class MainActivity extends AppCompatActivity implements
     @Override
     public void onNavigationItemReselected(@NonNull MenuItem item) {}
 
-//    @Override
-//    public void onBackPressed() {
-//        if(bottomNavigationView.getSelectedItemId() == R.id.navigation_home){
-//            super.onBackPressed();
-//            finish();
-//        }
-//        else{
-//            bottomNavigationView.setSelectedItemId(R.id.navigation_home);
-//        }
-//    }
+    @Override
+    protected void onResume() {
+        switch (bottomNavigationView.getSelectedItemId() ) {
+            case R.id.navigation_settings:
+                bottomNavigationView.getMenu()
+                        .findItem(R.id.navigation_settings)
+                        .setIcon(R.drawable.ic_baseline_settings_24);
+                break;
+            case R.id.navigation_home:
+                bottomNavigationView.getMenu()
+                        .findItem(R.id.navigation_home)
+                        .setIcon(R.drawable.ic_baseline_home_24);
+                break;
+            default:
+                break;
+        }
+        super.onResume();
+    }
 
+    public void initSettings(){
+        SharedPreferences sh = getSharedPreferences(SettingsFragment.SH, Context.MODE_PRIVATE);
+        SettingsFragment.SYSTEM_THEME = sh.getInt("theme", 0);
+        SettingsFragment.SYSTEM_UNIT = sh.getInt("unit", 0);
+
+        int nightMode;
+        switch (SettingsFragment.SYSTEM_THEME){
+            case 1:
+                nightMode = AppCompatDelegate.MODE_NIGHT_NO;
+                break;
+            case 2:
+                nightMode = AppCompatDelegate.MODE_NIGHT_YES;
+                break;
+            default:
+                nightMode = AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM;
+        }
+        AppCompatDelegate.setDefaultNightMode(nightMode);
+
+    }
 }

@@ -100,11 +100,15 @@ public class FirebaseHelper {
 
                                 fetchedData.add(res);
                             }
-
+                            v.setVisibility(View.GONE);
                             liveResultData.postValue(fetchedData);
                         }
                         else{
-                            Snackbar.make(v, "Something went wrong", Snackbar.LENGTH_LONG).show();
+                            try {
+                                Snackbar.make(v, "Something went wrong", Snackbar.LENGTH_LONG).show();
+                            } catch (Exception e){
+                                Log.i(TAG, "onComplete: "+e.getLocalizedMessage());
+                            }
                             Log.i(TAG, "storeData: failure "+ task.getException().getMessage());
                         }
                     }

@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.location.Location;
 import android.location.LocationManager;
@@ -25,6 +26,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatDelegate;
 import androidx.appcompat.widget.Toolbar;
 import androidx.cardview.widget.CardView;
 import androidx.core.app.ActivityCompat;
@@ -253,14 +255,7 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
     @Override
     public void onMapReady(@NonNull GoogleMap googleMap) {
         mMap = googleMap;
-        try {
-            boolean success = mMap.setMapStyle(MapStyleOptions.loadRawResourceStyle(getContext(), R.raw.style_json));
-            if (!success) {
-                Log.i(TAG, "onMapReady: parse failed");
-            }
-        } catch (Resources.NotFoundException e) {
-            Log.i(TAG, "onMapReady: style not found");
-        }
+       setMapTheme();
 
         mMap.setMaxZoomPreference(18);
         mMap.getUiSettings().setMapToolbarEnabled(false);
@@ -296,6 +291,28 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
 
         setCurrentLocation();
 
+    }
+
+    private void setMapTheme(){
+        int res,
+                nightModeFlag = getContext().getResources().getConfiguration().uiMode
+                        & Configuration.UI_MODE_NIGHT_MASK;
+        switch (nightModeFlag){
+            case Configuration.UI_MODE_NIGHT_YES:
+                res = R.raw.style_json_night;
+                break;
+            default:
+                res = R.raw.style_json;
+                break;
+        }
+        try {
+            boolean success = mMap.setMapStyle(MapStyleOptions.loadRawResourceStyle(getContext(), res));
+            if (!success) {
+                Log.i(TAG, "onMapReady: parse failed");
+            }
+        } catch (Resources.NotFoundException e) {
+            Log.i(TAG, "onMapReady: style not found");
+        }
     }
 
     Observer<Float> mDistObserver = f -> {
@@ -359,7 +376,7 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
 
                 })
                 .addOnFailureListener(e -> {
-                    Snackbar.make(getView(), e.getMessage(), Snackbar.LENGTH_LONG).show();
+                    Snackbar.make(mapView, e.getMessage(), Snackbar.LENGTH_LONG).show();
                 });
             }).start();
         } else if (travelCoordinates != null && travelCoordinates.size() > 0) {

@@ -1,16 +1,24 @@
 package com.android.arijit.firebase.walker;
 
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 
 import androidx.activity.OnBackPressedCallback;
+import androidx.appcompat.app.AppCompatDelegate;
 import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentActivity;
 
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.android.material.snackbar.Snackbar;
 
 /**
  * A simple {@link Fragment} subclass.
@@ -52,12 +60,17 @@ public class SettingsFragment extends Fragment {
 
     public static String distanceFormat(float d){
         String ret = "Distance travelled : ";
-        if(d>1000f){
-            d = d/1000f;
-            return ret+String.format("%.2f km", d);
+        if (SYSTEM_UNIT == 0) {
+            if (d > 1000f) {
+                d = d / 1000f;
+                return ret + String.format("%.2f km", d);
+            } else {
+                return ret + String.format("%.2f m", d);
+            }
         }
         else{
-            return ret+String.format("%.2f m", d);
+            d = d/1609.34f;
+            return ret + String.format("%.2f mi", d);
         }
     }
 
@@ -78,6 +91,9 @@ public class SettingsFragment extends Fragment {
         });
     }
 
+    public static int SYSTEM_THEME = 0;
+    public static int SYSTEM_UNIT = 0;
+    public static String SH = "Settings Preference";
     /**
      * tags for settings
      * @param inflater
@@ -85,17 +101,97 @@ public class SettingsFragment extends Fragment {
      * @param savedInstanceState
      * @return
      */
-
+    private String TAG = "SettingsFragment";
     public static float CAMERA_ZOOM=16;
     public static float CAMERA_TILT=0;
     public static float CAMERA_BEARING=0;
+
+    private AutoCompleteTextView myDropDwn;
+    private AutoCompleteTextView myDropDwn2;
+    private String[] themes = {"System", "Light", "Dark"};
+    private String[] unit = {"km/m", "miles"};
+    private FragmentActivity mFragActivity;
+
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         View root = inflater.inflate(R.layout.fragment_settiings, container, false);
+        mFragActivity = getActivity();
+        myDropDwn= (AutoCompleteTextView) root.findViewById(R.id.autoCompleteTextView2);
+        myDropDwn2 = (AutoCompleteTextView) root.findViewById(R.id.autoCompleteTextView4);
+
+        currSettingsHint();
 
         return root;
     }
+    private void currSettingsHint(){
+       myDropDwn.setText(themes[SYSTEM_THEME]);
+       myDropDwn2.setText(unit[SYSTEM_UNIT]);
+    }
+
+    @Override
+    public void onResume() {
+        ArrayAdapter<String>myAdapter = new ArrayAdapter<String>(getContext(),
+                R.layout.themes_dropdown, themes);
+        myAdapter.setDropDownViewResource(R.layout.themes_dropdown);
+        myDropDwn.setAdapter(myAdapter);
+        myDropDwn.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                setTheme(position);
+            }
+        });
+
+        ArrayAdapter<String>myAdapter2 = new ArrayAdapter<String>(getContext(),
+                R.layout.themes_dropdown, unit);
+        myAdapter.setDropDownViewResource(R.layout.themes_dropdown);
+        myDropDwn2.setAdapter(myAdapter2);
+        myDropDwn2.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                setUnit(position);
+            }
+        });
+        super.onResume();
+    }
+
+    private void setTheme(int themeID){
+
+        if(SYSTEM_THEME == themeID){
+            return;
+        }
+
+        switch (themeID){
+            case 0:
+                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
+                break;
+            case 1:
+                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
+                break;
+            case 2:
+                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
+                break;
+            default: break;
+        }
+
+        SYSTEM_THEME = themeID;
+        SharedPreferences.Editor shEditor = getActivity()
+                .getSharedPreferences(SH, Context.MODE_PRIVATE)
+                .edit();
+        shEditor.putInt("theme", themeID);
+        shEditor.commit();
+    }
+
+    private void setUnit(int unitID){
+        SYSTEM_UNIT = unitID;
+        SharedPreferences.Editor shEditor = getActivity()
+                .getSharedPreferences(SH, Context.MODE_PRIVATE)
+                .edit();
+        shEditor.putInt("unit", unitID);
+        shEditor.commit();
+    }
+
 }
+

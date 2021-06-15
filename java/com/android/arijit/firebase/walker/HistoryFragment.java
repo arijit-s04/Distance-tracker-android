@@ -3,6 +3,7 @@ package com.android.arijit.firebase.walker;
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.res.ColorStateList;
+import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.os.Bundle;
 
@@ -25,6 +26,7 @@ import android.view.ViewGroup;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.Button;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -150,6 +152,7 @@ public class HistoryFragment extends Fragment implements OnMapReadyCallback {
     private MapView mapView;
     private GoogleMap mMap;
     public static int clickedPosition;
+    private ProgressBar loading;
     /**
      * data members
      */
@@ -157,7 +160,9 @@ public class HistoryFragment extends Fragment implements OnMapReadyCallback {
     Observer<ArrayList<ResultData>> resultDataListObserver = new Observer<ArrayList<ResultData>>() {
         @Override
         public void onChanged(ArrayList<ResultData> resultData) {
+//            loading.setVisibility(View.GONE);
             resultDataArrayList = resultData;
+            recyclerView.setVisibility(View.VISIBLE);
             if(recyclerView !=null && resultDataArrayList!= null){
                 ResultDataAdapter mAdapter = new ResultDataAdapter(getContext(), getView(), resultDataArrayList);
                 recyclerView.setAdapter(mAdapter);
@@ -173,6 +178,7 @@ public class HistoryFragment extends Fragment implements OnMapReadyCallback {
         /**
          * init
          */
+        loading = (ProgressBar) root.findViewById(R.id.loading);
         mapPopupReveal = AnimationUtils.loadAnimation(getContext(), R.anim.map_popup_reveal);
         mapPopupContainer = root.findViewById(R.id.map_popup_container);
         resultDataArrayList = new ArrayList<>();
@@ -183,7 +189,7 @@ public class HistoryFragment extends Fragment implements OnMapReadyCallback {
         mapView.onCreate(savedInstanceState);
         mapView.getMapAsync(this::onMapReady);
 
-        FirebaseHelper.fetchData(root);
+        FirebaseHelper.fetchData(loading);
 
         return root;
     }
@@ -192,20 +198,33 @@ public class HistoryFragment extends Fragment implements OnMapReadyCallback {
     public void onMapReady(@NonNull GoogleMap googleMap) {
         mMap = googleMap;
         mMap = googleMap;
+        setMapTheme();
+
+        mMap.setMaxZoomPreference(18);
+        mMap.getUiSettings().setMapToolbarEnabled(false);
+    }
+
+    private void setMapTheme(){
+        int res,
+                nightModeFlag = getContext().getResources().getConfiguration().uiMode
+                        & Configuration.UI_MODE_NIGHT_MASK;
+        switch (nightModeFlag){
+            case Configuration.UI_MODE_NIGHT_YES:
+                res = R.raw.style_json_night;
+                break;
+            default:
+                res = R.raw.style_json;
+                break;
+        }
         try {
-            boolean success = mMap.setMapStyle(MapStyleOptions.loadRawResourceStyle(getContext(), R.raw.style_json));
+            boolean success = mMap.setMapStyle(MapStyleOptions.loadRawResourceStyle(getContext(), res));
             if (!success) {
                 Log.i(TAG, "onMapReady: parse failed");
             }
         } catch (Resources.NotFoundException e) {
             Log.i(TAG, "onMapReady: style not found");
         }
-
-        mMap.setMaxZoomPreference(18);
-        mMap.getUiSettings().setMapToolbarEnabled(false);
     }
-
-
 
     @Override
     public void onStart() {
