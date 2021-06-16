@@ -14,6 +14,8 @@ import android.util.Log;
 import android.view.MenuItem;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.android.material.snackbar.Snackbar;
+import com.google.firebase.auth.FirebaseAuth;
 
 import java.util.List;
 
@@ -21,14 +23,25 @@ public class MainActivity extends AppCompatActivity implements
         BottomNavigationView.OnNavigationItemSelectedListener, BottomNavigationView.OnNavigationItemReselectedListener {
     public static BottomNavigationView bottomNavigationView;
     private String TAG = "MainActivity";
+    boolean isVirgin = false;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        initSettings();
+        if(FirebaseAuth.getInstance().getCurrentUser()==null)
+            finish();
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Log.i(TAG, "onCreate: ");
-        bottomNavigationView = findViewById(R.id.navigation);
 
+        isVirgin = getIntent().getBooleanExtra("virgin", false);
+
+        if(isVirgin){
+            getIntent().removeExtra("virgin");
+            Snackbar.make(this.findViewById(R.id.navigation), "Login Successful", Snackbar.LENGTH_SHORT).show();
+        }
+        else {
+            initSettings();
+        }
+
+        bottomNavigationView = findViewById(R.id.navigation);
         bottomNavigationView.setOnNavigationItemSelectedListener(this);
         bottomNavigationView.setOnNavigationItemReselectedListener(this);
         if(savedInstanceState == null) {
@@ -139,4 +152,5 @@ public class MainActivity extends AppCompatActivity implements
         AppCompatDelegate.setDefaultNightMode(nightMode);
 
     }
+
 }

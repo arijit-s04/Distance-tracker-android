@@ -111,7 +111,7 @@ public class HistoryFragment extends Fragment implements OnMapReadyCallback {
                     //start marker
                     mMap.addMarker(new MarkerOptions().position(stt).title("Start"));
 
-                    mMap.addPolyline(new PolylineOptions().addAll(travelCoor));
+                    mMap.addPolyline(new PolylineOptions().color(HomeFragment.POLYLINE_COLOR).addAll(travelCoor));
                     mMap.moveCamera(
                             CameraUpdateFactory.newCameraPosition(
                                     CameraPosition.builder()

@@ -8,6 +8,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.content.res.Resources;
+import android.graphics.Color;
 import android.location.Location;
 import android.location.LocationManager;
 import android.os.Bundle;
@@ -24,6 +25,7 @@ import android.view.animation.AnimationUtils;
 import android.widget.Button;
 import android.widget.TextView;
 
+import androidx.annotation.ColorLong;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatDelegate;
@@ -122,6 +124,7 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
     private Button btnCardOk;
     private ResultData resultToStore;
     private View resultContainer;
+    public static int POLYLINE_COLOR;
 
     /**
      *
@@ -255,11 +258,11 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
     @Override
     public void onMapReady(@NonNull GoogleMap googleMap) {
         mMap = googleMap;
-       setMapTheme();
+        setMapTheme();
 
         mMap.setMaxZoomPreference(18);
         mMap.getUiSettings().setMapToolbarEnabled(false);
-        polylineOptions = new PolylineOptions();
+        polylineOptions = new PolylineOptions().color(POLYLINE_COLOR);
 
         if (!trackState && initLatLng != null) {
             cameraBuilder.target(initLatLng);
@@ -300,8 +303,10 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
         switch (nightModeFlag){
             case Configuration.UI_MODE_NIGHT_YES:
                 res = R.raw.style_json_night;
+                POLYLINE_COLOR = Color.WHITE;
                 break;
             default:
+                POLYLINE_COLOR = Color.BLACK;
                 res = R.raw.style_json;
                 break;
         }
