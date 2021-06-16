@@ -1,6 +1,7 @@
 package com.android.arijit.firebase.walker;
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 
@@ -16,9 +17,12 @@ import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
+import android.widget.Button;
+import android.widget.TextView;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.snackbar.Snackbar;
+import com.google.firebase.auth.FirebaseAuth;
 
 /**
  * A simple {@link Fragment} subclass.
@@ -110,7 +114,7 @@ public class SettingsFragment extends Fragment {
     private AutoCompleteTextView myDropDwn2;
     private String[] themes = {"System", "Light", "Dark"};
     private String[] unit = {"km/m", "miles"};
-    private FragmentActivity mFragActivity;
+    private TextView tvname, tvemail;
 
 
     @Override
@@ -118,11 +122,26 @@ public class SettingsFragment extends Fragment {
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         View root = inflater.inflate(R.layout.fragment_settiings, container, false);
-        mFragActivity = getActivity();
+
         myDropDwn= (AutoCompleteTextView) root.findViewById(R.id.autoCompleteTextView2);
         myDropDwn2 = (AutoCompleteTextView) root.findViewById(R.id.autoCompleteTextView4);
+        tvemail = root.findViewById(R.id.tv_email);
+        tvname = root.findViewById(R.id.tv_name);
+        FirebaseAuth mAuth = FirebaseAuth.getInstance();
+
+        tvname.setText(mAuth.getCurrentUser().getDisplayName());
+        tvemail.setText(mAuth.getCurrentUser().getEmail());
 
         currSettingsHint();
+
+        ((Button) root.findViewById(R.id.logout)).setOnClickListener(
+                v -> {
+                    resetSettings();
+                    mAuth.signOut();
+                    getActivity().startActivity(new Intent(getContext(), AccountActivity.class).putExtra("logout", true));
+                    getActivity().finish();
+                }
+        );
 
         return root;
     }
@@ -171,6 +190,7 @@ public class SettingsFragment extends Fragment {
                 AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
                 break;
             case 2:
+                Log.i(TAG, "setTheme: here");
                 AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
                 break;
             default: break;
@@ -192,6 +212,25 @@ public class SettingsFragment extends Fragment {
         shEditor.putInt("unit", unitID);
         shEditor.commit();
     }
-
+    public void resetSettings(){
+        SettingsFragment.SYSTEM_THEME = 0;
+        SettingsFragment.SYSTEM_UNIT = 0;
+        getActivity().getSharedPreferences(SettingsFragment.SH, Context.MODE_PRIVATE).edit()
+                .putInt("theme", SettingsFragment.SYSTEM_THEME)
+                .putInt("unit", SettingsFragment.SYSTEM_UNIT)
+                .commit();
+        int nightMode;
+        switch (SettingsFragment.SYSTEM_THEME){
+            case 1:
+                nightMode = AppCompatDelegate.MODE_NIGHT_NO;
+                break;
+            case 2:
+                nightMode = AppCompatDelegate.MODE_NIGHT_YES;
+                break;
+            default:
+                nightMode = AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM;
+        }
+        AppCompatDelegate.setDefaultNightMode(nightMode);
+    }
 }
 

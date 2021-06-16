@@ -18,7 +18,7 @@ public class MarkerAnimation {
         final long start = SystemClock.uptimeMillis();
         final Interpolator interpolator = new AccelerateDecelerateInterpolator();
         final float durationInMs = 2000;
-        PolylineOptions polylineOptions = new PolylineOptions();
+        PolylineOptions polylineOptions = new PolylineOptions().color(HomeFragment.POLYLINE_COLOR);
 
         handler.post(new Runnable() {
             long elapsed;

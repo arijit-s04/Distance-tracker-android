@@ -103,7 +103,6 @@
             android:layout_height="wrap_content"
             android:background="@drawable/btn_background"
             android:text="logout"
-            android:textColor="@color/black"
             android:textStyle="bold|italic"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
