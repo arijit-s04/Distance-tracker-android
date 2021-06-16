@@ -8,4 +8,4 @@ Koumudi Ranjan Mandal,
 Avinash Chaudhary,
 Prasanta Majhi,
 Abhinandan Chakrabarty.
-![alt text](https://github.com/arijit-s04/Distance-tracker-android/blob/main/res/mipmap-xxxhdpi/ic_launcher_round.png?raw=true)
+![alt text](https://github.com/arijit-s04/Distance-tracker-android/blob/screenshots/Screenshot_20210616-222045546.jpg?raw=true)
