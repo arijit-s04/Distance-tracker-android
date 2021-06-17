@@ -14,10 +14,10 @@ public class AccountActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_account);
-        if(FirebaseAuth.getInstance().getCurrentUser()!=null){
-            startActivity(new Intent(this, MainActivity.class));
-            this.finish();
-        }
+//        if(FirebaseAuth.getInstance().getCurrentUser()!=null){
+//            startActivity(new Intent(this, MainActivity.class));
+//            this.finish();
+//        }
         if(getIntent().getBooleanExtra("logout", false)){
             getIntent().removeExtra("logout");
             Snackbar.make(this.findViewById(R.id.fragmentContainerView), "Logout Successful", Snackbar.LENGTH_SHORT)
