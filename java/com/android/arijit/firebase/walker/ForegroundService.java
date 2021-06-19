@@ -76,9 +76,12 @@ public class ForegroundService extends Service {
         createNotificationChannel();
 
         Intent notificationIntent = new Intent(this, MainActivity.class);
+        notificationIntent.addCategory(Intent.CATEGORY_LAUNCHER);
+        notificationIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         PendingIntent pendingIntent = PendingIntent.getActivity(this,
-                0, notificationIntent, 0);
+                0, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
         mNotificationBuilder = new NotificationCompat.Builder(this, CHANNEL_ID)
+                .setColor(getResources().getColor(R.color.green_300))
                 .setSmallIcon(R.drawable.ic_baseline_directions_24)
                 .setContentTitle("Tracking in progress...")
                 .setContentText(distanceFormat(totDistTravelled))

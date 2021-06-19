@@ -157,6 +157,8 @@ public class RegisterFragment extends Fragment {
                                                 user.sendEmailVerification()
                                                     .addOnCompleteListener(task -> {
                                                         progressBar.setVisibility(View.GONE);
+                                                        if(fAuth!= null)
+                                                            fAuth.signOut();
                                                         if (task.isSuccessful()) {
                                                             Snackbar.make(getView(), "Account created. Please verify the email sent to you.", Snackbar.LENGTH_LONG)
                                                                     .show();
@@ -174,6 +176,7 @@ public class RegisterFragment extends Fragment {
                                             Snackbar.make(getView(), e.getMessage(), Snackbar.LENGTH_LONG)
                                                     .show();
                                         });
+
                             }
                         })
                         .addOnFailureListener(new OnFailureListener() {

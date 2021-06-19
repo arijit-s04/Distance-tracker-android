@@ -139,4 +139,13 @@ public class FirebaseHelper {
                 });
     }
 
+    public static boolean isVerifiedUser(){
+        FirebaseAuth mAuth = FirebaseAuth.getInstance();
+        if(mAuth.getCurrentUser()!=null && mAuth.getCurrentUser().isEmailVerified()) {
+            return true;
+        } else if(mAuth.getCurrentUser() !=null )
+            mAuth.signOut();
+        return false;
+    }
+
 }

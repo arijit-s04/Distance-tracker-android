@@ -26,7 +26,7 @@ public class MainActivity extends AppCompatActivity implements
     boolean isVirgin = false;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        if(FirebaseAuth.getInstance().getCurrentUser()==null)
+        if(!FirebaseHelper.isVerifiedUser())
             finish();
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
