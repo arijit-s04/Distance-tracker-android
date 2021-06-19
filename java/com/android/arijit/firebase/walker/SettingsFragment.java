@@ -1,6 +1,8 @@
 package com.android.arijit.firebase.walker;
 
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
@@ -136,10 +138,22 @@ public class SettingsFragment extends Fragment {
 
         ((Button) root.findViewById(R.id.logout)).setOnClickListener(
                 v -> {
-                    resetSettings();
-                    mAuth.signOut();
-                    getActivity().startActivity(new Intent(getContext(), AccountActivity.class).putExtra("logout", true));
-                    getActivity().finish();
+                    new AlertDialog.Builder(getContext())
+                            .setTitle("Logout")
+                            .setMessage("Do you want to logout?")
+                            .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    resetSettings();
+                                    mAuth.signOut();
+                                    getActivity().startActivity(new Intent(getContext(), AccountActivity.class).putExtra("logout", true));
+                                    getActivity().finish();
+                                }
+                            })
+                            .setNegativeButton("No", null)
+                            .create().show();
+
+
                 }
         );
 

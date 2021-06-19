@@ -49,11 +49,11 @@ public class SplashActivity extends AppCompatActivity {
         new Handler().postDelayed(new Runnable() {
             @Override
             public void run() {
-                if(firebaseAuth.getCurrentUser() == null) {
-                    startActivity(new Intent(SplashActivity.this, AccountActivity.class));
+                if(FirebaseHelper.isVerifiedUser()) {
+                    startActivity(new Intent(SplashActivity.this, MainActivity.class));
                 }
                 else{
-                    startActivity(new Intent(SplashActivity.this, MainActivity.class));
+                    startActivity(new Intent(SplashActivity.this, AccountActivity.class));
                 }
                 finish();
             }
