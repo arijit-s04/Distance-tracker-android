@@ -3,11 +3,11 @@ A Distance Tracking app for android using Google Maps SDK for android and fireba
 Track your location and total diatance travel in real time, with storage facility for future reference along with the path travelled.  
 
 Lead members :-  
-Arijit Saha,  
-Koumudi Ranjan Mandal,  
-Avinash Chaudhary,  
-Prasanta Majhi,  
-Abhinandan Chakrabarty.  
+- *Arijit Saha*  
+- *Koumudi Ranjan Mandal*  
+- *Avinash Chaudhary*  
+- *Prasanta Majhi*  
+- *Abhinandan Chakrabarty*  
 # ScreenShots
 ![scrncht1](https://github.com/arijit-s04/Distance-tracker-android/blob/screenshots/resized000.png?raw=true)
 ![scrncht1](https://github.com/arijit-s04/Distance-tracker-android/blob/screenshots/resized001.png?raw=true)
