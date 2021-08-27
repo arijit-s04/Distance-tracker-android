@@ -20,3 +20,5 @@ Lead members :-
 ![scrncht1](https://github.com/arijit-s04/Distance-tracker-android/blob/screenshots/resized007.png?raw=true)
 
 ###### [App logo courtesy](https://www.flaticon.com/)
+## P.S.
+If you want to look at a better architecturial implementation, [*check this*](https://github.com/arijit-s04/Distance-tracker-MVVM)
